@@ -1,0 +1,332 @@
+// `everme auth …`: get, inspect, adopt, or drop the credential this machine
+// uses. The device flow is the default (an `emk_` can be pasted too), and
+// `--no-wait`/`--device-code` split it across processes for agents that cannot
+// sit in a terminal waiting for a human to click approve.
+
+///|
+/// Dispatch `everme auth <subcommand>`.
+async fn auth_command(m : @argparse.Matches) -> Int32 {
+  guard m.subcommand is Some((name, selected)) else {
+    usage("`auth` needs a subcommand: login, status, adopt-evercli, or logout")
+  }
+  match name {
+    "login" => auth_login(selected)
+    "status" => auth_status(selected)
+    "adopt-evercli" => auth_adopt(selected)
+    "logout" => auth_logout(selected)
+    _ => usage("unknown auth subcommand: \{name}")
+  }
+}
+
+///|
+/// How long to wait between device-flow polls when the backend names no
+/// interval.
+const DefaultPollSeconds : Int32 = 5
+
+///|
+/// How many polls before giving up when the backend reports no expiry.
+const MaxPolls : Int32 = 120
+
+///|
+/// `everme auth login` — store an API key, resume a device flow, start one and
+/// exit, or run the whole flow in this process.
+async fn auth_login(m : @argparse.Matches) -> Int32 {
+  let paths = @config.Paths::resolve()
+  let settings = @config.Settings::resolve()
+  let machine = machine_of(m)
+  let base = base_of(m, settings)
+  let platform = platform_of(m, settings)
+  let api_key = value_of(m, "api-key")
+  if !api_key.is_empty() {
+    return finish_login(paths, base, api_key, "", "", machine)
+  }
+  let client = @api.Client::new(base~)
+  let device_code_flag = value_of(m, "device-code")
+  if !device_code_flag.is_empty() {
+    return poll_device(paths, client, device_code_flag, machine)
+  }
+  let fingerprint = @creds.machine_id(paths.machine_file())
+  let start = client.device_start(
+    platform~,
+    client_name="everme",
+    client_version=@config.Version,
+    fingerprint~,
+  )
+  if start.device_code.is_empty() || start.verification_url.is_empty() {
+    raise @api.ApiError({
+      kind: "upstream",
+      message: "the backend accepted the request but returned no device flow",
+      hint: "check EVERME_API_BASE; a self-hosted gateway may not implement /auth/device",
+      http_status: 200,
+      code: 0,
+      request_id: "",
+    })
+  }
+  if !machine {
+    write_stderr(
+      "Open \{start.verification_url} and enter the code \{start.user_code}.\n",
+    )
+    write_stderr(
+      "Waiting for approval (the code expires in \{start.expires_in}s)…\n",
+    )
+  }
+  if flag_of(m, "no-wait") {
+    save_device_session(paths, start, platform)
+    let data : Json = {
+      "status": "pending",
+      "verificationUrl": Json(start.verification_url),
+      "userCode": Json(start.user_code),
+      "deviceCode": Json(start.device_code),
+      "expiresInSec": Json(start.expires_in),
+      "resumeCommand": Json(
+        "everme auth login --device-code \{start.device_code}",
+      ),
+    }
+    let text = "open \{start.verification_url} and enter \{start.user_code} (expires in \{start.expires_in}s); then run `everme auth login --device-code \{start.device_code}`"
+    emit(machine, text, data)
+    return 0
+  }
+  poll_loop(
+    paths,
+    client,
+    start.device_code,
+    start.expires_in,
+    start.interval,
+    machine,
+  )
+}
+
+///|
+/// Persist a `--no-wait` grant so a later process can finish it.
+async fn save_device_session(
+  paths : @config.Paths,
+  start : @api.DeviceStart,
+  platform : String,
+) -> Unit {
+  @fs.mkdir(dirname_of(paths.device_session_file()), recursive=true) catch {
+    _ => ()
+  }
+  let body : Json = {
+    "deviceCode": Json(start.device_code),
+    "verificationUrl": Json(start.verification_url),
+    "userCode": Json(start.user_code),
+    "expiresIn": Json(start.expires_in),
+    "platform": Json(platform),
+  }
+  @fs.write_text(paths.device_session_file(), body.stringify()) catch {
+    error => fail("cannot write \{paths.device_session_file()}: \{error}")
+  }
+}
+
+///|
+/// The directory part of `path`.
+fn dirname_of(path : String) -> String {
+  match path.rev_split_once("/") {
+    Some((dir, _)) => if dir.is_empty() { "/" } else { dir.to_owned() }
+    None => "."
+  }
+}
+
+///|
+/// Poll a device code until it is approved, refused, or out of attempts.
+async fn poll_device(
+  paths : @config.Paths,
+  client : @api.Client,
+  device_code : String,
+  machine : Bool,
+) -> Int32 {
+  poll_loop(paths, client, device_code, 0, DefaultPollSeconds, machine)
+}
+
+///|
+/// The poll loop itself. `expires_in` of 0 means "the caller gave no budget";
+/// `MaxPolls` still bounds it, so a wedged approval never hangs the terminal.
+async fn poll_loop(
+  paths : @config.Paths,
+  client : @api.Client,
+  device_code : String,
+  expires_in : Int32,
+  interval : Int32,
+  machine : Bool,
+) -> Int32 {
+  let interval = if interval > 0 { interval } else { DefaultPollSeconds }
+  let budget = if expires_in > 0 { expires_in / interval + 1 } else { MaxPolls }
+  let mut approved : @api.DeviceToken? = None
+  let mut polls = 0
+  while approved is None && polls < budget {
+    let polled = client.device_token(device_code)
+    if polled.status == "approved" {
+      approved = Some(polled)
+      continue
+    }
+    if polled.status == "expired" {
+      not_logged_in(
+        "the device code expired before it was approved", "run `everme auth login` again to get a fresh code",
+      )
+    }
+    polls = polls + 1
+    if approved is None && polls < budget {
+      @async.sleep(interval * 1000)
+    }
+  }
+  guard approved is Some(token) else {
+    not_logged_in(
+      "the device flow was not approved in time", "run `everme auth login` again",
+    )
+  }
+  write_stderr("approved.\n")
+  finish_login(
+    paths,
+    "",
+    token.api_key,
+    token.agent_token,
+    token.agent_id,
+    machine,
+  )
+}
+
+///|
+/// Store what the flow produced, cache the account it belongs to, and report.
+/// `base` empty means "reuse the configured base".
+async fn finish_login(
+  paths : @config.Paths,
+  base : String,
+  api_key : String,
+  agent_token : String,
+  agent_id : String,
+  machine : Bool,
+) -> Int32 {
+  let settings = @config.Settings::resolve()
+  let base = if base.is_empty() { base_of_empty(settings) } else { base }
+  let creds = @creds.Credentials::load(paths.credentials_file())
+  if !api_key.is_empty() {
+    creds.api_key = api_key
+  }
+  if !agent_token.is_empty() {
+    creds.agent_token = agent_token
+  }
+  if !agent_id.is_empty() {
+    creds.agent_id = agent_id
+  }
+  if !creds.has_api_key() {
+    not_logged_in(
+      "the backend approved the flow but returned no API key", "run `everme auth login` again",
+    )
+  }
+  creds.save(paths.credentials_file())
+  let info = @api.Client::new(base~).login(creds.api_key)
+  let account : @creds.Account = {
+    account_id: info.account_id,
+    email: info.email,
+    api_key_prefix: info.api_key_prefix,
+    scopes: info.scopes,
+  }
+  account.save(paths.account_file()) catch {
+    _ => ()
+  }
+  let data : Json = {
+    "loggedIn": true,
+    "email": Json(info.email),
+    "accountId": Json(info.account_id),
+    "apiKey": Json(@redact.mask(creds.api_key)),
+    "agentToken": Json(@redact.mask(creds.agent_token)),
+    "agentId": Json(creds.agent_id),
+    "scopes": Json(info.scopes),
+    "credentialsFile": Json(paths.credentials_file()),
+  }
+  let text = "logged in as \{info.email} (\{@redact.mask(creds.api_key)})\ncredentials: \{paths.credentials_file()}"
+  emit(machine, text, data)
+  0
+}
+
+///|
+/// The API root from settings alone (no command-line overrides in scope).
+fn base_of_empty(settings : @config.Settings) -> String raise {
+  @config.api_root(settings.api_base)
+}
+
+///|
+/// `everme auth status` — what is stored, masked, plus the cached account.
+async fn auth_status(m : @argparse.Matches) -> Int32 {
+  let paths = @config.Paths::resolve()
+  let machine = machine_of(m)
+  let creds = @creds.Credentials::load(paths.credentials_file())
+  let account = @creds.Account::load(paths.account_file())
+  let account_json : Json = match account {
+    Some(account) =>
+      {
+        "accountId": Json(account.account_id),
+        "email": Json(account.email),
+        "apiKeyPrefix": Json(account.api_key_prefix),
+        "scopes": Json(account.scopes),
+      }
+    None => Json::null()
+  }
+  let data : Json = {
+    "loggedIn": Json(creds.has_api_key()),
+    "apiKey": Json(@redact.mask(creds.api_key)),
+    "agentToken": Json(@redact.mask(creds.agent_token)),
+    "agentId": Json(creds.agent_id),
+    "credentialsFile": Json(paths.credentials_file()),
+    "account": account_json,
+  }
+  let who = match account {
+    Some(account) =>
+      if account.email.is_empty() {
+        "unknown account"
+      } else {
+        account.email
+      }
+    None => "no cached account"
+  }
+  let text = if creds.has_api_key() {
+    "logged in: \{who}\n  api-key     \{@redact.mask(creds.api_key)}\n  agent-token \{@redact.mask(creds.agent_token)}\n  agent-id    \{if creds.agent_id.is_empty() { "none" } else { creds.agent_id }}\n  stored at   \{paths.credentials_file()}"
+  } else {
+    "not logged in (run `everme auth login`, or `everme auth adopt-evercli` to reuse an evercli login)"
+  }
+  emit(machine, text, data)
+  0
+}
+
+///|
+/// `everme auth adopt-evercli` — take the credential the upstream CLI already
+/// stored on this machine, then verify it and cache the account.
+async fn auth_adopt(m : @argparse.Matches) -> Int32 {
+  let paths = @config.Paths::resolve()
+  let settings = @config.Settings::resolve()
+  let machine = machine_of(m)
+  let base = base_of(m, settings)
+  let home = @config.home()
+  let adopted = @creds.adopt_evercli(home)
+  guard adopted is Some(adopted) else {
+    not_logged_in(
+      "no evercli login found at \{home}/.local/share/evercli/credentials.json",
+      "run `evercli auth login` first, or `everme auth login`",
+    )
+  }
+  let creds = @creds.Credentials::load(paths.credentials_file())
+  if !adopted.api_key.is_empty() {
+    creds.api_key = adopted.api_key
+  }
+  if !adopted.agent_token.is_empty() {
+    creds.agent_token = adopted.agent_token
+  }
+  creds.save(paths.credentials_file())
+  finish_login(paths, base, creds.api_key, "", "", machine)
+}
+
+///|
+/// `everme auth logout` — remove the stored credential and the account cache.
+async fn auth_logout(m : @argparse.Matches) -> Int32 {
+  let paths = @config.Paths::resolve()
+  let machine = machine_of(m)
+  @fs.remove(paths.credentials_file(), allow_missing=true)
+  @fs.remove(paths.account_file(), allow_missing=true)
+  @fs.remove(paths.device_session_file(), allow_missing=true)
+  emit(
+    machine,
+    "logged out; the credential was removed from \{paths.credentials_file()}",
+    { "loggedIn": false, "credentialsFile": Json(paths.credentials_file()) },
+  )
+  0
+}

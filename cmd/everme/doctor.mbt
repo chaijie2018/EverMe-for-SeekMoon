@@ -1,0 +1,294 @@
+// `everme doctor` — the honest self-check. Two of its checks are local
+// (credential present, account reachable); `--probe-platform` adds the two
+// that answer the question this CLI cannot answer from source code: does this
+// EverMe backend accept the platform label we want to register under?
+//
+// The probe is deliberately shaped like `install` (list first, register only
+// when this machine has no agent yet) so running it twice does not pile up
+// agents, and a successful registration stores the token it minted.
+
+///|
+/// One line of the report. `state` is `ok`, `fail`, or `skip`.
+struct Check {
+  label : String
+  state : String
+  http_status : Int32
+  status : Int32
+  detail : String
+  error : String
+  request_id : String
+}
+
+///|
+/// A check that passed.
+fn Check::ok(
+  label : String,
+  http_status : Int32,
+  status : Int32,
+  detail : String,
+) -> Check {
+  {
+    label,
+    state: "ok",
+    http_status,
+    status,
+    detail,
+    error: "",
+    request_id: "",
+  }
+}
+
+///|
+/// A check the backend refused, keeping its own words.
+fn Check::failed(
+  label : String,
+  failure : @api.Failure,
+  detail : String,
+) -> Check {
+  {
+    label,
+    state: "fail",
+    http_status: failure.http_status,
+    status: failure.code,
+    detail,
+    error: failure.message,
+    request_id: failure.request_id,
+  }
+}
+
+///|
+/// A check that did not run.
+fn Check::skipped(label : String, detail : String) -> Check {
+  {
+    label,
+    state: "skip",
+    http_status: 0,
+    status: 0,
+    detail,
+    error: "",
+    request_id: "",
+  }
+}
+
+///|
+/// Whether this check failed.
+fn Check::failed_(self : Check) -> Bool {
+  self.state == "fail"
+}
+
+///|
+/// One aligned terminal line: `[i/n] label  state  HTTP …  status=…  detail`.
+fn Check::render(self : Check, index : Int32, total : Int32) -> String {
+  let http : String = if self.http_status == 0 {
+    ""
+  } else {
+    "HTTP \{self.http_status}  "
+  }
+  let status : String = if self.http_status == 0 {
+    ""
+  } else {
+    "status=\{self.status}  "
+  }
+  let error : String = if self.error.is_empty() {
+    ""
+  } else {
+    "error=\"\{self.error}\"  "
+  }
+  let request : String = if self.request_id.is_empty() {
+    ""
+  } else {
+    "requestId=\{self.request_id}  "
+  }
+  "[\{index}/\{total}] \{self.label}  \{self.state}  \{http}\{status}\{error}\{request}\{self.detail}"
+}
+
+///|
+/// The machine form of one check.
+fn Check::json(self : Check) -> Json {
+  {
+    "label": Json(self.label),
+    "state": Json(self.state),
+    "httpStatus": Json(self.http_status),
+    "status": Json(self.status),
+    "detail": Json(self.detail),
+    "error": Json(self.error),
+    "requestId": Json(self.request_id),
+  }
+}
+
+///|
+/// Whether an envelope-carrying exchange succeeded.
+fn exchange_ok(exchange : @api.Exchange) -> Bool {
+  exchange.http_status < 300 && exchange.envelope.is_ok()
+}
+
+///|
+/// `everme doctor [--probe-platform] [--no-register]`.
+async fn doctor_command(m : @argparse.Matches) -> Int32 {
+  let paths = @config.Paths::resolve()
+  let settings = @config.Settings::resolve()
+  let machine = machine_of(m)
+  let base = base_of(m, settings)
+  let platform = platform_of(m, settings)
+  let probe = flag_of(m, "probe-platform")
+  let register = probe && !flag_of(m, "no-register")
+  let creds = @creds.Credentials::load(paths.credentials_file())
+  let fingerprint = @creds.machine_id(paths.machine_file())
+  let checks : Array[Check] = []
+  let client = @api.Client::new(base~).with_token(creds.api_key)
+
+  // 1. Is a credential stored at all?
+  if creds.has_api_key() {
+    checks.push(
+      Check::ok(
+        "credential",
+        0,
+        0,
+        "\{@redact.mask(creds.api_key)} at \{paths.credentials_file()}",
+      ),
+    )
+  } else {
+    checks.push(
+      Check::skipped(
+        "credential", "no API key stored (run `everme auth login` or `everme auth adopt-evercli`)",
+      ),
+    )
+  }
+
+  // 2. Does the backend accept it, and who is it?
+  if creds.has_api_key() {
+    let exchange = client.attempt("/auth/login", {
+      "apiKey": Json(creds.api_key),
+    })
+    if exchange_ok(exchange) {
+      let result = exchange.envelope.result
+      let email = @api.string_field(result, "email")
+      let scopes = @api.strings_field(result, "scopes").join(",")
+      checks.push(
+        Check::ok(
+          "account",
+          exchange.http_status,
+          exchange.envelope.status,
+          "\{email}  scopes=\{scopes}",
+        ),
+      )
+    } else {
+      checks.push(Check::failed("account", @api.failure_of(exchange), ""))
+    }
+  } else {
+    checks.push(Check::skipped("account", "needs a stored credential"))
+  }
+
+  // 3./4. The platform probe: list, then register only when nothing exists.
+  let mut verdict : String = "not probed"
+  if probe && !creds.has_api_key() {
+    checks.push(Check::skipped("agents/list", "needs a stored credential"))
+    checks.push(Check::skipped("agents", "needs a stored credential"))
+    verdict = "not probed: no credential"
+  } else if probe {
+    let listed = client.attempt("/agents/list", {
+      "platform": Json(platform),
+      "machineFingerprint": Json(fingerprint),
+    })
+    let mut existing = 0
+    if exchange_ok(listed) {
+      existing = match listed.envelope.result {
+        Object(fields) =>
+          match fields.get("items") {
+            Some(Array(items)) => items.length()
+            _ => 0
+          }
+        _ => 0
+      }
+      checks.push(
+        Check::ok(
+          "agents/list",
+          listed.http_status,
+          listed.envelope.status,
+          "platform \"\{platform}\"  existing agents: \{existing}",
+        ),
+      )
+    } else {
+      checks.push(Check::failed("agents/list", @api.failure_of(listed), ""))
+    }
+    if exchange_ok(listed) && existing > 0 {
+      checks.push(
+        Check::skipped(
+          "agents", "this machine already has an agent for this platform; nothing to register",
+        ),
+      )
+      verdict = "accepted (already registered)"
+    } else if !exchange_ok(listed) {
+      checks.push(Check::skipped("agents", "listing failed first"))
+      verdict = "inconclusive: the backend refused /agents/list"
+    } else if !register {
+      checks.push(Check::skipped("agents", "--no-register was passed"))
+      verdict = "inconclusive: registration was skipped"
+    } else {
+      let registered = client.attempt("/agents", {
+        "platform": Json(platform),
+        "name": "SeekMoon",
+        "clientVersion": Json(@config.Version),
+        "machineFingerprint": Json(fingerprint),
+      })
+      if exchange_ok(registered) {
+        let result = registered.envelope.result
+        let agent_id = @api.string_field(result, "agentId")
+        let agent_token = @api.string_field(result, "agentToken")
+        // Registration is what `install` will do too: keep the token so it is
+        // not a slot we minted and threw away.
+        creds.agent_id = agent_id
+        creds.agent_token = agent_token
+        creds.save(paths.credentials_file()) catch {
+          _ => ()
+        }
+        checks.push(
+          Check::ok(
+            "agents",
+            registered.http_status,
+            registered.envelope.status,
+            "agentId=\{agent_id}  token=\{@redact.mask(agent_token)}",
+          ),
+        )
+        verdict = "accepted: the backend registered platform \"\{platform}\""
+      } else {
+        let failure = @api.failure_of(registered)
+        checks.push(Check::failed("agents", failure, ""))
+        verdict = if failure.http_status >= 500 || failure.http_status == 0 {
+          "inconclusive: the backend answered \{failure.message}"
+        } else {
+          "rejected: platform \"\{platform}\" was refused (see the error above); retry with `--platform <value>`"
+        }
+      }
+    }
+  }
+
+  let failed = checks.any(check => check.failed_())
+  let total = checks.length()
+  let text = StringBuilder()
+  text.write_string("everme doctor\n")
+  text.write_string("  api      \{base}\n")
+  text.write_string("  platform \"\{platform}\"\n")
+  text.write_string("  machine  \{fingerprint[:12]}…\n\n")
+  for index, check in checks {
+    text.write_string(check.render(index + 1, total))
+    text.write_string("\n")
+  }
+  if probe {
+    text.write_string("\nverdict: \{verdict}\n")
+  }
+  let data : Json = {
+    "api": Json(base),
+    "platform": Json(platform),
+    "fingerprint": Json(fingerprint),
+    "probed": Json(probe),
+    "verdict": Json(verdict),
+    "checks": Json(checks.map(check => check.json())),
+  }
+  emit(machine, text.to_string(), data)
+  if failed {
+    1
+  } else {
+    0
+  }
+}

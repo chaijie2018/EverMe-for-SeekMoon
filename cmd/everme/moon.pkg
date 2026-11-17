@@ -1,0 +1,25 @@
+import {
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/async",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/stdio",
+  "moonbitlang/core/env",
+  "moonbitlang/x/sys",
+  "seekmoon/everme/api",
+  "seekmoon/everme/cli",
+  "seekmoon/everme/config",
+  "seekmoon/everme/creds",
+  "seekmoon/everme/redact",
+}
+
+supported_targets = "+native"
+
+options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/fs",
+    "moonbitlang/core/async/stdio",
+  ],
+)
+
+pkgtype(kind: "executable")
