@@ -8,16 +8,13 @@
 pub const DefaultApiBase : String = "https://api.everme.evermind.ai"
 
 ///|
-/// The platform label this CLI prefers. A backend that validates against its
-/// own enum may reject it; `EVERME_PLATFORM` overrides.
-pub const DefaultPlatform : String = "seekmoon"
-
-///|
-/// The label to negotiate down to when the backend refuses `DefaultPlatform`
-/// as a value. `evercli` is what upstream's own CLI registers in `auth login`,
-/// so it reads as "some command-line client" rather than impersonating another
-/// product; the managed backend accepts it.
-pub const FallbackPlatform : String = "evercli"
+/// The platform label this CLI registers under. `evercli` is what upstream's
+/// own CLI uses in `auth login`, so it reads as "some command-line client"
+/// rather than impersonating another product, and the managed backend accepts
+/// it. `seekmoon` was verified to be rejected (`status=20004`,
+/// "does not validate as known_platform"); when upstream adds it, either change
+/// this constant or pass `--platform seekmoon`.
+pub const DefaultPlatform : String = "evercli"
 
 ///|
 /// The version this build reports to EverMe and in its own `--version`.

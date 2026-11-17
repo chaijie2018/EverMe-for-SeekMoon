@@ -51,6 +51,9 @@ test "a non-http base is refused" {
 }
 
 ///|
-test "the default platform is the label this CLI registers under" {
-  assert_eq(@config.DefaultPlatform, "seekmoon")
+test "the default platform is the label the managed backend accepts" {
+  // `seekmoon` was verified to be refused (`status=20004`,
+  // "does not validate as known_platform"), so the default is the label that
+  // works; `--platform` overrides it once upstream whitelists the real name.
+  assert_eq(@config.DefaultPlatform, "evercli")
 }

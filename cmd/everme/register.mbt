@@ -1,27 +1,27 @@
-// Registering this machine's agent is the step the backend can refuse by
+// Registering this machine's agent is the one call the backend can refuse by
 // *value*: it validates `platform` against its own `known_platform` enum, and
-// `seekmoon` is not in it (HTTP 400, `status=20004`,
-// "platform: seekmoon does not validate as known_platform").
+// `seekmoon` is not in it (HTTP 400, `status=20004`, "platform: seekmoon does
+// not validate as known_platform").
 //
-// So the label is negotiated, not assumed: try the one we want, and only when
-// the backend rejects that value retry with a neutral label — `evercli`, the
-// one upstream's own CLI registers, which reads as "some command-line client"
-// rather than impersonating a specific product.
+// So the default label is the one that is known to work — `evercli`, which is
+// what upstream's own CLI registers, and which reads as "some command-line
+// client" rather than impersonating a specific product. There is no negotiation
+// step: the label is a default you can override with `--platform` (for a
+// self-hosted EverOS, or once upstream whitelists `seekmoon`), not something
+// this CLI guesses its way through.
 //
-// What is never negotiated is the identity: every accepted attempt is our own
-// `POST /agents`, minting our own agent and our own token. Borrowing another
-// agent's token would file this CLI's memories under that agent (see design
-// §12.2), which is why `adopt-evercli` takes only the account key.
+// What is never negotiable is the identity: this is our own `POST /agents`,
+// minting our own agent and our own token. Borrowing another agent's token would
+// file this CLI's memories under that agent (design §12.2), which is why
+// `adopt-evercli` takes only the account key.
 
 ///|
-/// One registration attempt, kept so the report can show every label tried and
-/// exactly what the backend said about each.
+/// One registration call, kept so the report can show the label that was tried
+/// and exactly what the backend answered.
 pub(all) struct Attempt {
   platform : String
-  accepted : Bool
   http_status : Int32
   status : Int32
-  error : String
   request_id : String
 }
 
@@ -41,89 +41,60 @@ pub fn exchange_ok(exchange : @api.Exchange) -> Bool {
 }
 
 ///|
-/// The labels to try, in order, without blanks or repeats.
-pub fn platform_candidates(
-  desired : String,
-  fallback : String,
-) -> Array[String] {
-  let candidates : Array[String] = []
-  for label in [desired, fallback] {
-    if !label.is_empty() && !candidates.contains(label) {
-      candidates.push(label)
-    }
-  }
-  candidates
+/// The hint attached to a rejected label: the backend told us the value is not
+/// known, so the next action is to drop the override rather than retry.
+fn label_hint() -> String {
+  "the managed backend accepts `evercli` (the default); set a label from its known_platform, or unset --platform"
 }
 
 ///|
-/// Whether a rejection is about the label's value, and so worth retrying under
-/// another one. A network failure, a bad credential, or a 5xx would fail
-/// identically under every label — retrying there would only hide the cause.
-pub fn label_rejected(failure : @api.Failure) -> Bool {
-  failure.kind == "invalid_args"
-}
-
-///|
-/// Register this machine's agent under `desired`, falling back to `fallback`
-/// only on a value rejection. Returns every attempt plus the accepted one.
-/// Raises the failure that stopped the search: a non-value failure immediately
-/// (so a network problem is not disguised as a platform problem), or the last
-/// rejection when no label was accepted.
-pub async fn register_with_fallback(
+/// Register this machine's agent under `platform`, exactly once. Returns the
+/// call that succeeded; a rejection of the label itself is reported with the
+/// backend's own words plus what to do about it, not retried under another one.
+pub async fn register_agent(
   client : @api.Client,
   fingerprint : String,
-  desired : String,
-  fallback : String,
+  platform : String,
   name : String,
-) -> (Array[Attempt], Registered) {
-  let attempts : Array[Attempt] = []
-  let mut registered : Registered? = None
-  let mut last : @api.Failure? = None
-  for label in platform_candidates(desired, fallback) {
-    let exchange = client.attempt("/agents", {
-      "platform": Json(label),
-      "name": Json(name),
-      "clientVersion": Json(@config.Version),
-      "machineFingerprint": Json(fingerprint),
-    })
-    if exchange_ok(exchange) {
-      let result = exchange.envelope.result
-      attempts.push({
-        platform: label,
-        accepted: true,
-        http_status: exchange.http_status,
-        status: exchange.envelope.status,
-        error: "",
-        request_id: exchange.envelope.request_id,
-      })
-      registered = Some({
-        platform: label,
-        agent_id: @api.string_field(result, "agentId"),
-        agent_token: @api.string_field(result, "agentToken"),
-        token_prefix: @api.string_field(result, "tokenPrefix"),
-      })
-      break
-    }
+) -> (Attempt, Registered) {
+  let exchange = client.attempt("/agents", {
+    "platform": Json(platform),
+    "name": Json(name),
+    "clientVersion": Json(@config.Version),
+    "machineFingerprint": Json(fingerprint),
+  })
+  let attempt : Attempt = {
+    platform,
+    http_status: exchange.http_status,
+    status: exchange.envelope.status,
+    request_id: exchange.envelope.request_id,
+  }
+  if !exchange_ok(exchange) {
     let failure = @api.failure_of(exchange)
-    attempts.push({
-      platform: label,
-      accepted: false,
+    // A value rejection is the only one worth a tailored hint: everything else
+    // keeps the taxonomy's own advice.
+    let hint = if failure.kind == "invalid_args" {
+      label_hint()
+    } else {
+      failure.hint
+    }
+    raise @api.ApiError({
+      kind: failure.kind,
+      message: failure.message,
+      hint,
       http_status: failure.http_status,
-      status: failure.code,
-      error: failure.message,
+      code: failure.code,
       request_id: failure.request_id,
     })
-    last = Some(failure)
-    if !label_rejected(failure) {
-      raise @api.ApiError(failure)
-    }
   }
-  guard registered is Some(registered) else {
-    let failure = match last {
-      Some(failure) => failure
-      None => @api.network_failure("no platform label was available to try")
-    }
-    raise @api.ApiError(failure)
-  }
-  (attempts, registered)
+  let result = exchange.envelope.result
+  (
+    attempt,
+    {
+      platform,
+      agent_id: @api.string_field(result, "agentId"),
+      agent_token: @api.string_field(result, "agentToken"),
+      token_prefix: @api.string_field(result, "tokenPrefix"),
+    },
+  )
 }

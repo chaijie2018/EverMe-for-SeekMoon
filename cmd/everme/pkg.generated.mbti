@@ -8,21 +8,15 @@ import {
 // Values
 pub fn exchange_ok(@api.Exchange) -> Bool
 
-pub fn label_rejected(@api.Failure) -> Bool
-
-pub fn platform_candidates(String, String) -> Array[String]
-
-pub async fn register_with_fallback(@api.Client, String, String, String, String) -> (Array[Attempt], Registered)
+pub async fn register_agent(@api.Client, String, String, String) -> (Attempt, Registered)
 
 // Errors
 
 // Types and methods
 pub(all) struct Attempt {
   platform : String
-  accepted : Bool
   http_status : Int32
   status : Int32
-  error : String
   request_id : String
 }
 

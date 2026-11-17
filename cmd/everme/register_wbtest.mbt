@@ -1,50 +1,9 @@
-// The label negotiation is the only place this CLI retries a rejected request,
-// so both halves of that rule are pinned down here: which labels get tried, and
-// which failures are allowed to trigger another try.
+// The pieces of the registration path that can be checked without a backend:
+// what counts as success, what counts as "already registered", and the hint a
+// rejected label leaves the user with.
 //
 // Whitebox on purpose: these are helpers of the `everme` binary's own package,
 // and a main package should not grow a blackbox test surface.
-
-///|
-test "the wanted label is tried first, then the fallback" {
-  assert_eq(platform_candidates("seekmoon", "evercli"), ["seekmoon", "evercli"])
-}
-
-///|
-test "a repeated or blank label is not tried twice" {
-  assert_eq(platform_candidates("evercli", "evercli"), ["evercli"])
-  assert_eq(platform_candidates("", "evercli"), ["evercli"])
-  assert_eq(platform_candidates("seekmoon", ""), ["seekmoon"])
-  assert_eq(platform_candidates("", ""), [])
-}
-
-///|
-test "only a value rejection retries under another label" {
-  let rejected : @api.Failure = {
-    kind: "invalid_args",
-    message: "platform: seekmoon does not validate as known_platform",
-    hint: "",
-    http_status: 400,
-    code: 20004,
-    request_id: "req_1",
-  }
-  assert_true(label_rejected(rejected))
-}
-
-///|
-test "a network, auth, throttling, or server failure does not retry" {
-  for kind in ["network", "auth", "rate_limit", "upstream", "conflict"] {
-    let failure : @api.Failure = {
-      kind,
-      message: "unrelated to the label",
-      hint: "",
-      http_status: 500,
-      code: 0,
-      request_id: "",
-    }
-    assert_false(label_rejected(failure))
-  }
-}
 
 ///|
 test "a success envelope is recognised without trusting the status alone" {
@@ -83,4 +42,11 @@ test "a connected agent counts as already registered, a disconnected one does no
 ///|
 test "no rows means nothing is registered" {
   assert_eq(connected_agents([]), 0)
+}
+
+///|
+test "the rejected-label hint names the label that is known to work" {
+  let hint = label_hint()
+  assert_true(hint.contains("evercli"))
+  assert_true(hint.contains("--platform"))
 }

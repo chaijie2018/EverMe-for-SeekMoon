@@ -347,18 +347,25 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
       checks.push(Check::skipped("agents", "--no-register was passed"))
       verdict = "inconclusive: registration was skipped"
     } else {
-      // The label is negotiated here: `seekmoon` first, then the neutral
-      // fallback, and only on a value rejection. Every attempt is reported, so
-      // the label this CLI actually registered under is never a secret.
-      let (attempts, registered) = register_with_fallback(
-        client,
-        fingerprint,
-        platform,
-        @config.FallbackPlatform,
-        "SeekMoon",
-      )
-      for attempt in attempts {
-        if attempt.accepted {
+      // One attempt under the configured label; a rejection is reported as the
+      // backend worded it, not retried under another label.
+      let outcome : Result[(Attempt, Registered), @api.Failure] = Ok(
+        register_agent(client, fingerprint, platform, "SeekMoon"),
+      ) catch {
+        @api.ApiError(failure) => Err(failure)
+        error => raise error
+      }
+      match outcome {
+        Ok((attempt, registered)) => {
+          // Keep what we minted: the agent, its token, and the label/prefix that
+          // let a later run prove the token is still ours.
+          creds.agent_id = registered.agent_id
+          creds.agent_token = registered.agent_token
+          creds.platform = registered.platform
+          creds.token_prefix = registered.token_prefix
+          creds.save(paths.credentials_file()) catch {
+            _ => ()
+          }
           checks.push(
             Check::ok(
               "agents",
@@ -367,36 +374,12 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
               "platform \"\{attempt.platform}\" accepted  agentId=\{registered.agent_id}  token=\{@redact.mask(registered.agent_token)}",
             ),
           )
-        } else {
-          checks.push(
-            Check::failed(
-              "agents",
-              {
-                kind: "invalid_args",
-                message: attempt.error,
-                hint: "this label is not in the backend's known_platform",
-                http_status: attempt.http_status,
-                code: attempt.status,
-                request_id: attempt.request_id,
-              },
-              "platform \"\{attempt.platform}\" rejected, trying the next label",
-            ),
-          )
+          verdict = "accepted: the backend registered platform \"\{registered.platform}\""
         }
-      }
-      // Keep what we minted: the agent, its token, and the label/prefix that
-      // let a later run prove the token is still ours.
-      creds.agent_id = registered.agent_id
-      creds.agent_token = registered.agent_token
-      creds.platform = registered.platform
-      creds.token_prefix = registered.token_prefix
-      creds.save(paths.credentials_file()) catch {
-        _ => ()
-      }
-      verdict = if registered.platform == platform {
-        "accepted: the backend registered platform \"\{registered.platform}\""
-      } else {
-        "accepted under the fallback label \"\{registered.platform}\" (\"\{platform}\" is not a known_platform)"
+        Err(failure) => {
+          checks.push(Check::failed("agents", failure, ""))
+          verdict = "rejected: platform \"\{platform}\" was refused (see the error above)"
+        }
       }
     }
   }

@@ -4,9 +4,7 @@ package "seekmoon/everme/config"
 // Values
 pub const DefaultApiBase : String = "https://api.everme.evermind.ai"
 
-pub const DefaultPlatform : String = "seekmoon"
-
-pub const FallbackPlatform : String = "evercli"
+pub const DefaultPlatform : String = "evercli"
 
 pub const Version : String = "0.1.0"
 
