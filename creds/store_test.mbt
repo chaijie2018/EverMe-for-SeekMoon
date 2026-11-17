@@ -186,6 +186,23 @@ test "verify_agent rejects a platform mismatch" {
 }
 
 ///|
+test "verify_agent rejects an agent the backend reports as disconnected" {
+  let items : Array[Json] = [
+    {
+      "id": "agt_1",
+      "platform": "codex",
+      "tokenPrefix": "evt_abcd",
+      "connectionStatus": "disconnected",
+    },
+  ]
+  let message = match @creds.verify_agent("agt_1", "evt_abcd", "codex", items) {
+    Ok(_) => "accepted"
+    Err(message) => message
+  }
+  assert_true(message.contains("disconnected"))
+}
+
+///|
 test "verify_agent refuses a token whose owner is unknown" {
   let items : Array[Json] = [
     { "id": "agt_1", "platform": "codex", "tokenPrefix": "evt_abcd" },

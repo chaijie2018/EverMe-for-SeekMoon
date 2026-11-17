@@ -180,6 +180,11 @@ pub fn verify_agent(
       "agent \{agent_id} is not in this account's agent list (disconnected or belonging to another account)",
     )
   }
+  // A disconnected agent stays in the list, so existence alone proves nothing.
+  let status = string_field(item, "connectionStatus")
+  if !status.is_empty() && status != "connected" {
+    return Err("agent \{agent_id} is \{status}, so its token cannot be used")
+  }
   let listed_prefix = string_field(item, "tokenPrefix")
   if !token_prefix.is_empty() &&
     !listed_prefix.is_empty() &&
