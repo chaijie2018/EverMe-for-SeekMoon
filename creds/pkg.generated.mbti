@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "seekmoon/everme/creds"
 
+import {
+  "moonbitlang/core/json",
+}
+
 // Values
 pub async fn adopt_evercli(String) -> Credentials?
 
@@ -9,6 +13,8 @@ pub fn dirname(String) -> String
 pub async fn machine_id(String) -> String
 
 pub fn to_hex(Bytes) -> String
+
+pub fn verify_agent(String, String, String, Array[@json.Json]) -> Result[Unit, String]
 
 // Errors
 
@@ -26,6 +32,8 @@ pub(all) struct Credentials {
   mut api_key : String
   mut agent_token : String
   mut agent_id : String
+  mut platform : String
+  mut token_prefix : String
 }
 pub fn Credentials::empty() -> Self
 pub fn Credentials::has_agent_token(Self) -> Bool

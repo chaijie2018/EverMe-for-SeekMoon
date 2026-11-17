@@ -267,6 +267,8 @@ async fn auth_status(m : @argparse.Matches) -> Int32 {
     "apiKey": Json(@redact.mask(creds.api_key)),
     "agentToken": Json(@redact.mask(creds.agent_token)),
     "agentId": Json(creds.agent_id),
+    "platform": Json(creds.platform),
+    "tokenPrefix": Json(creds.token_prefix),
     "credentialsFile": Json(paths.credentials_file()),
     "account": account_json,
   }
@@ -280,7 +282,7 @@ async fn auth_status(m : @argparse.Matches) -> Int32 {
     None => "no cached account"
   }
   let text = if creds.has_api_key() {
-    "logged in: \{who}\n  api-key     \{@redact.mask(creds.api_key)}\n  agent-token \{@redact.mask(creds.agent_token)}\n  agent-id    \{if creds.agent_id.is_empty() { "none" } else { creds.agent_id }}\n  stored at   \{paths.credentials_file()}"
+    "logged in: \{who}\n  api-key     \{@redact.mask(creds.api_key)}\n  agent-token \{@redact.mask(creds.agent_token)}\n  agent-id    \{if creds.agent_id.is_empty() { "none" } else { creds.agent_id }}\n  platform    \{if creds.platform.is_empty() { "none" } else { creds.platform }}\n  stored at   \{paths.credentials_file()}"
   } else {
     "not logged in (run `everme auth login`, or `everme auth adopt-evercli` to reuse an evercli login)"
   }
@@ -305,12 +307,11 @@ async fn auth_adopt(m : @argparse.Matches) -> Int32 {
     )
   }
   let creds = @creds.Credentials::load(paths.credentials_file())
-  if !adopted.api_key.is_empty() {
-    creds.api_key = adopted.api_key
-  }
-  if !adopted.agent_token.is_empty() {
-    creds.agent_token = adopted.agent_token
-  }
+  // Only the account key crosses over. The agent token in that file belongs to
+  // whichever agent evercli registered; borrowing it would make this CLI's
+  // memories show up as that agent's, and it would break the day evercli
+  // rotates it. Our own agent is registered by `install` / `doctor`.
+  creds.api_key = adopted.api_key
   creds.save(paths.credentials_file())
   finish_login(paths, base, creds.api_key, "", "", machine)
 }

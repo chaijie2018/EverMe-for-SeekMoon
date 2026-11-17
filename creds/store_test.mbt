@@ -18,12 +18,16 @@ async test "credentials round-trip through the store" {
     api_key: sample_api_key,
     agent_token: sample_agent_token,
     agent_id: "agt_1",
+    platform: "codex",
+    token_prefix: "evt_abcd",
   }
   creds.save(path)
   let loaded = @creds.Credentials::load(path)
   assert_eq(loaded.api_key, sample_api_key)
   assert_eq(loaded.agent_token, sample_agent_token)
   assert_eq(loaded.agent_id, "agt_1")
+  assert_eq(loaded.platform, "codex")
+  assert_eq(loaded.token_prefix, "evt_abcd")
   assert_true(loaded.has_api_key())
   assert_true(loaded.has_agent_token())
 }
@@ -56,6 +60,8 @@ async test "no temp file is left behind by a save" {
     api_key: sample_api_key,
     agent_token: "",
     agent_id: "",
+    platform: "",
+    token_prefix: "",
   }
   creds.save(path)
   let leftovers = @fs.readdir(dir)
@@ -68,6 +74,8 @@ test "the summary never shows a usable secret" {
     api_key: sample_api_key,
     agent_token: sample_agent_token,
     agent_id: "agt_1",
+    platform: "codex",
+    token_prefix: "evt_abcd",
   }
   let summary = creds.summary()
   assert_false(summary.contains(sample_api_key))
@@ -77,7 +85,7 @@ test "the summary never shows a usable secret" {
 }
 
 ///|
-async test "adopt-evercli reads a flat evercli credentials file" {
+async test "adopt-evercli takes the account key and never the agent token" {
   let home = @fs.tmpdir(prefix="everme-home-")
   defer @fs.rmdir(home, recursive=true)
   @fs.mkdir(home + "/.local/share/evercli", recursive=true)
@@ -88,7 +96,22 @@ async test "adopt-evercli reads a flat evercli credentials file" {
   let adopted = @creds.adopt_evercli(home)
   guard adopted is Some(adopted) else { fail("expected an adopted credential") }
   assert_eq(adopted.api_key, sample_api_key)
-  assert_eq(adopted.agent_token, sample_agent_token)
+  // The agent token in that file belongs to whichever agent evercli
+  // registered; borrowing it would attribute our memories to that agent.
+  assert_eq(adopted.agent_token, "")
+  assert_eq(adopted.agent_id, "")
+}
+
+///|
+async test "adopt-evercli refuses a file that only holds an agent token" {
+  let home = @fs.tmpdir(prefix="everme-home-")
+  defer @fs.rmdir(home, recursive=true)
+  @fs.mkdir(home + "/.local/share/evercli", recursive=true)
+  @fs.write_text(
+    home + "/.local/share/evercli/credentials.json",
+    "{\"agent-token\":\"\{sample_agent_token}\"}",
+  )
+  assert_true(@creds.adopt_evercli(home) is None)
 }
 
 ///|
@@ -116,4 +139,60 @@ async test "the machine id is stable across calls" {
   let second = @creds.machine_id(path)
   assert_true(first.length() >= 16)
   assert_eq(first, second)
+}
+
+///|
+test "verify_agent accepts the agent our own registration minted" {
+  let items : Array[Json] = [
+    { "id": "agt_1", "platform": "codex", "tokenPrefix": "evt_abcd" },
+  ]
+  assert_true(@creds.verify_agent("agt_1", "evt_abcd", "codex", items) is Ok(_))
+}
+
+///|
+test "verify_agent rejects a token that belongs to another agent" {
+  let items : Array[Json] = [
+    { "id": "agt_1", "platform": "codex", "tokenPrefix": "evt_zzzz" },
+  ]
+  let message = match @creds.verify_agent("agt_1", "evt_abcd", "codex", items) {
+    Ok(_) => "accepted"
+    Err(message) => message
+  }
+  assert_true(message.contains("not the one"))
+}
+
+///|
+test "verify_agent rejects an agent missing from the account list" {
+  let items : Array[Json] = [
+    { "id": "agt_other", "platform": "codex", "tokenPrefix": "evt_abcd" },
+  ]
+  let message = match @creds.verify_agent("agt_1", "evt_abcd", "codex", items) {
+    Ok(_) => "accepted"
+    Err(message) => message
+  }
+  assert_true(message.contains("not in this account"))
+}
+
+///|
+test "verify_agent rejects a platform mismatch" {
+  let items : Array[Json] = [
+    { "id": "agt_1", "platform": "workbuddy", "tokenPrefix": "evt_abcd" },
+  ]
+  let message = match @creds.verify_agent("agt_1", "evt_abcd", "codex", items) {
+    Ok(_) => "accepted"
+    Err(message) => message
+  }
+  assert_true(message.contains("belongs to platform"))
+}
+
+///|
+test "verify_agent refuses a token whose owner is unknown" {
+  let items : Array[Json] = [
+    { "id": "agt_1", "platform": "codex", "tokenPrefix": "evt_abcd" },
+  ]
+  let message = match @creds.verify_agent("", "evt_abcd", "codex", items) {
+    Ok(_) => "accepted"
+    Err(message) => message
+  }
+  assert_true(message.contains("no agent id"))
 }

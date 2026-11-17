@@ -123,6 +123,20 @@ fn exchange_ok(exchange : @api.Exchange) -> Bool {
 }
 
 ///|
+/// The token prefix to verify against. A store written before prefixes were
+/// recorded still has the token itself, and the backend's `tokenPrefix` is that
+/// token's first eight characters — the same rule redaction uses.
+fn effective_prefix(creds : @creds.Credentials) -> String {
+  if !creds.token_prefix.is_empty() {
+    creds.token_prefix
+  } else if creds.agent_token.length() >= 8 {
+    creds.agent_token[:8].to_owned()
+  } else {
+    ""
+  }
+}
+
+///|
 /// `everme doctor [--probe-platform] [--no-register]`.
 async fn doctor_command(m : @argparse.Matches) -> Int32 {
   let paths = @config.Paths::resolve()
@@ -179,7 +193,76 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
     checks.push(Check::skipped("account", "needs a stored credential"))
   }
 
-  // 3./4. The platform probe: list, then register only when nothing exists.
+  // 3. Is the stored agent token actually ours? A token whose owner we cannot
+  // name is a token we must not use: it would attribute this CLI's memories to
+  // another host's agent, and it would break the day that host rotates it.
+  if creds.has_agent_token() && creds.has_api_key() {
+    let listed = client.attempt("/agents/list", {
+      "platform": Json(creds.platform),
+      "machineFingerprint": Json(fingerprint),
+    })
+    if exchange_ok(listed) {
+      let items : Array[Json] = match listed.envelope.result {
+        Object(fields) =>
+          match fields.get("items") {
+            Some(Array(items)) => items
+            _ => []
+          }
+        _ => []
+      }
+      match
+        @creds.verify_agent(
+          creds.agent_id,
+          effective_prefix(creds),
+          creds.platform,
+          items,
+        ) {
+        Ok(_) => {
+          // A store written before prefixes were recorded still passes on the
+          // agent id; record the prefix now so the next run can be strict.
+          if creds.token_prefix.is_empty() && !creds.agent_token.is_empty() {
+            creds.token_prefix = effective_prefix(creds)
+            creds.save(paths.credentials_file()) catch {
+              _ => ()
+            }
+          }
+          checks.push(
+            Check::ok(
+              "agent",
+              listed.http_status,
+              listed.envelope.status,
+              "agentId=\{creds.agent_id}  token=\{effective_prefix(creds)}  platform=\{if creds.platform.is_empty() { "unrecorded" } else { creds.platform }}  (registered by this CLI)",
+            ),
+          )
+        }
+        Err(message) =>
+          checks.push(
+            Check::failed(
+              "agent",
+              {
+                kind: "auth",
+                message,
+                hint: "run `everme doctor --probe-platform --platform <label>` to register this CLI's own agent",
+                http_status: listed.http_status,
+                code: listed.envelope.status,
+                request_id: listed.envelope.request_id,
+              },
+              "stored token is not usable as this CLI's identity",
+            ),
+          )
+      }
+    } else {
+      checks.push(Check::failed("agent", @api.failure_of(listed), ""))
+    }
+  } else {
+    checks.push(
+      Check::skipped(
+        "agent", "no agent token stored yet (registration happens below)",
+      ),
+    )
+  }
+
+  // 4./5. The platform probe: list, then register only when nothing exists.
   let mut verdict : String = "not probed"
   if probe && !creds.has_api_key() {
     checks.push(Check::skipped("agents/list", "needs a stored credential"))
@@ -236,9 +319,12 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
         let agent_id = @api.string_field(result, "agentId")
         let agent_token = @api.string_field(result, "agentToken")
         // Registration is what `install` will do too: keep the token so it is
-        // not a slot we minted and threw away.
+        // not a slot we minted and threw away, together with the label and the
+        // prefix that let a later run prove the token is still ours.
         creds.agent_id = agent_id
         creds.agent_token = agent_token
+        creds.platform = platform
+        creds.token_prefix = @api.string_field(result, "tokenPrefix")
         creds.save(paths.credentials_file()) catch {
           _ => ()
         }
