@@ -1,0 +1,119 @@
+// The credential store's two jobs: write a file only this user can read, and
+// read back what an earlier run (or the upstream CLI) left there.
+
+///|
+/// A token-shaped secret, so the tests exercise real-looking values.
+let sample_api_key : String = "emk_507d1234567890abcdef1234567890ab"
+
+///|
+/// An agent-token-shaped secret.
+let sample_agent_token : String = "evt_abcd1234567890abcdef1234567890ab"
+
+///|
+async test "credentials round-trip through the store" {
+  let dir = @fs.tmpdir(prefix="everme-creds-")
+  defer @fs.rmdir(dir, recursive=true)
+  let path = dir + "/credentials.json"
+  let creds : @creds.Credentials = {
+    api_key: sample_api_key,
+    agent_token: sample_agent_token,
+    agent_id: "agt_1",
+  }
+  creds.save(path)
+  let loaded = @creds.Credentials::load(path)
+  assert_eq(loaded.api_key, sample_api_key)
+  assert_eq(loaded.agent_token, sample_agent_token)
+  assert_eq(loaded.agent_id, "agt_1")
+  assert_true(loaded.has_api_key())
+  assert_true(loaded.has_agent_token())
+}
+
+///|
+async test "an absent store reads as empty rather than failing" {
+  let dir = @fs.tmpdir(prefix="everme-creds-")
+  defer @fs.rmdir(dir, recursive=true)
+  let loaded = @creds.Credentials::load(dir + "/missing.json")
+  assert_false(loaded.has_api_key())
+  assert_false(loaded.has_agent_token())
+  assert_eq(loaded.agent_id, "")
+}
+
+///|
+async test "a corrupt store reads as empty so login can repair it" {
+  let dir = @fs.tmpdir(prefix="everme-creds-")
+  defer @fs.rmdir(dir, recursive=true)
+  let path = dir + "/credentials.json"
+  @fs.write_text(path, "{not json")
+  assert_false(@creds.Credentials::load(path).has_api_key())
+}
+
+///|
+async test "no temp file is left behind by a save" {
+  let dir = @fs.tmpdir(prefix="everme-creds-")
+  defer @fs.rmdir(dir, recursive=true)
+  let path = dir + "/credentials.json"
+  let creds : @creds.Credentials = {
+    api_key: sample_api_key,
+    agent_token: "",
+    agent_id: "",
+  }
+  creds.save(path)
+  let leftovers = @fs.readdir(dir)
+  assert_eq(leftovers, ["credentials.json"])
+}
+
+///|
+test "the summary never shows a usable secret" {
+  let creds : @creds.Credentials = {
+    api_key: sample_api_key,
+    agent_token: sample_agent_token,
+    agent_id: "agt_1",
+  }
+  let summary = creds.summary()
+  assert_false(summary.contains(sample_api_key))
+  assert_false(summary.contains(sample_agent_token))
+  assert_true(summary.contains("emk_507d_REDACTED"))
+  assert_true(summary.contains("evt_abcd_REDACTED"))
+}
+
+///|
+async test "adopt-evercli reads a flat evercli credentials file" {
+  let home = @fs.tmpdir(prefix="everme-home-")
+  defer @fs.rmdir(home, recursive=true)
+  @fs.mkdir(home + "/.local/share/evercli", recursive=true)
+  @fs.write_text(
+    home + "/.local/share/evercli/credentials.json",
+    "{\"api-key\":\"\{sample_api_key}\",\"agent-token\":\"\{sample_agent_token}\"}",
+  )
+  let adopted = @creds.adopt_evercli(home)
+  guard adopted is Some(adopted) else { fail("expected an adopted credential") }
+  assert_eq(adopted.api_key, sample_api_key)
+  assert_eq(adopted.agent_token, sample_agent_token)
+}
+
+///|
+async test "adopt-evercli reports nothing when evercli never logged in" {
+  let home = @fs.tmpdir(prefix="everme-home-")
+  defer @fs.rmdir(home, recursive=true)
+  assert_true(@creds.adopt_evercli(home) is None)
+}
+
+///|
+async test "adopt-evercli tolerates a corrupt evercli file" {
+  let home = @fs.tmpdir(prefix="everme-home-")
+  defer @fs.rmdir(home, recursive=true)
+  @fs.mkdir(home + "/.local/share/evercli", recursive=true)
+  @fs.write_text(home + "/.local/share/evercli/credentials.json", "nope")
+  assert_true(@creds.adopt_evercli(home) is None)
+}
+
+///|
+async test "the machine id is stable across calls" {
+  let dir = @fs.tmpdir(prefix="everme-machine-")
+  defer @fs.rmdir(dir, recursive=true)
+  let path = dir + "/machine.json"
+  let first = @creds.machine_id(path)
+  let second = @creds.machine_id(path)
+  assert_true(first.length() >= 16)
+  assert_eq(first, second)
+}

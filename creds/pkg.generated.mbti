@@ -1,0 +1,39 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "seekmoon/everme/creds"
+
+// Values
+pub async fn adopt_evercli(String) -> Credentials?
+
+pub fn dirname(String) -> String
+
+pub async fn machine_id(String) -> String
+
+pub fn to_hex(Bytes) -> String
+
+// Errors
+
+// Types and methods
+pub(all) struct Account {
+  account_id : String
+  email : String
+  api_key_prefix : String
+  scopes : Array[String]
+}
+pub async fn Account::load(String) -> Self?
+pub async fn Account::save(Self, String) -> Unit
+
+pub(all) struct Credentials {
+  mut api_key : String
+  mut agent_token : String
+  mut agent_id : String
+}
+pub fn Credentials::empty() -> Self
+pub fn Credentials::has_agent_token(Self) -> Bool
+pub fn Credentials::has_api_key(Self) -> Bool
+pub async fn Credentials::load(String) -> Self
+pub async fn Credentials::save(Self, String) -> Unit
+pub fn Credentials::summary(Self) -> String
+
+// Type aliases
+
+// Traits
