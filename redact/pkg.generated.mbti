@@ -1,0 +1,15 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "seekmoon/everme/redact"
+
+// Values
+pub fn mask(String) -> String
+
+pub fn mask_one(String) -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
