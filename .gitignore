@@ -1,0 +1,12 @@
+# Research material — design notes and papers stay out of the repository.
+research/
+
+# MoonBit build output and dependency cache.
+_build/
+.mooncakes/
+
+# SeekMoon's per-workspace session state.
+.openseek/
+
+# macOS
+.DS_Store
