@@ -1,0 +1,103 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "seekmoon/everme/api"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn bool_field(@json.Json, String) -> Bool
+
+pub fn classify(Int32) -> String
+
+pub fn decode_envelope(String, Int32) -> Envelope raise ApiError
+
+pub fn failure_of(Exchange) -> Failure
+
+pub fn hint_for(String) -> String
+
+pub fn int_field(@json.Json, String) -> Int32
+
+pub fn network_failure(String) -> Failure
+
+pub fn string_field(@json.Json, String) -> String
+
+pub fn strings_field(@json.Json, String) -> Array[String]
+
+// Errors
+pub(all) suberror ApiError {
+  ApiError(Failure)
+}
+
+// Types and methods
+pub(all) struct AgentInfo {
+  agent_id : String
+  agent_token : String
+  token_prefix : String
+  source_id : String
+}
+
+pub(all) struct Client {
+  base : String
+  token : String
+}
+pub async fn Client::attempt(Self, String, @json.Json) -> Exchange raise ApiError
+pub fn Client::base(Self) -> String
+pub async fn Client::device_start(Self, platform~ : String, client_name~ : String, client_version~ : String, fingerprint~ : String) -> DeviceStart raise ApiError
+pub async fn Client::device_token(Self, String) -> DeviceToken raise ApiError
+pub async fn Client::list_agents(Self, platform~ : String, fingerprint~ : String) -> Array[@json.Json] raise ApiError
+pub async fn Client::login(Self, String) -> LoginInfo raise ApiError
+pub fn Client::new(base~ : String) -> Self
+pub async fn Client::register_agent(Self, platform~ : String, name~ : String, client_version~ : String, fingerprint~ : String) -> AgentInfo raise ApiError
+pub async fn Client::request(Self, String, @json.Json) -> Exchange raise ApiError
+pub fn Client::with_token(Self, String) -> Self
+
+pub(all) struct DeviceStart {
+  device_code : String
+  user_code : String
+  verification_url : String
+  expires_in : Int32
+  interval : Int32
+}
+
+pub(all) struct DeviceToken {
+  status : String
+  api_key : String
+  agent_token : String
+  agent_id : String
+  interval : Int32
+}
+
+pub(all) struct Envelope {
+  status : Int32
+  error : String
+  request_id : String
+  result : @json.Json
+}
+pub fn Envelope::is_ok(Self) -> Bool
+
+pub(all) struct Exchange {
+  http_status : Int32
+  envelope : Envelope
+}
+
+pub(all) struct Failure {
+  kind : String
+  message : String
+  hint : String
+  http_status : Int32
+  code : Int32
+  request_id : String
+}
+
+pub(all) struct LoginInfo {
+  valid : Bool
+  account_id : String
+  email : String
+  api_key_prefix : String
+  scopes : Array[String]
+}
+
+// Type aliases
+
+// Traits
