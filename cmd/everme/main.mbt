@@ -83,6 +83,18 @@ fn root_command() -> @argparse.Command {
             about="Reuse an evercli login already present on this machine.",
           ),
           Command("logout", about="Delete the stored credential."),
+          Command(
+            "disconnect-agent",
+            about="Disconnect one of this account's agents, e.g. one registered under a label you no longer want.",
+            options=[
+              @argparse.OptionArg(
+                "agent-id",
+                long="agent-id",
+                default_values=[""],
+                about="Agent id to disconnect; `everme doctor` prints this CLI's own agent id.",
+              ),
+            ],
+          ),
         ],
       ),
       Command(

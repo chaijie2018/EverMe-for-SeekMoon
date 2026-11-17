@@ -45,6 +45,7 @@ pub async fn Client::attempt(Self, String, @json.Json) -> Exchange raise ApiErro
 pub fn Client::base(Self) -> String
 pub async fn Client::device_start(Self, platform~ : String, client_name~ : String, client_version~ : String, fingerprint~ : String) -> DeviceStart raise ApiError
 pub async fn Client::device_token(Self, String) -> DeviceToken raise ApiError
+pub async fn Client::disconnect_agent(Self, String) -> Unit raise ApiError
 pub async fn Client::list_agents(Self, platform~ : String, fingerprint~ : String) -> Array[@json.Json] raise ApiError
 pub async fn Client::login(Self, String) -> LoginInfo raise ApiError
 pub fn Client::new(base~ : String) -> Self

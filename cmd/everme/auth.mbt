@@ -7,13 +7,16 @@
 /// Dispatch `everme auth <subcommand>`.
 async fn auth_command(m : @argparse.Matches) -> Int32 {
   guard m.subcommand is Some((name, selected)) else {
-    usage("`auth` needs a subcommand: login, status, adopt-evercli, or logout")
+    usage(
+      "`auth` needs a subcommand: login, status, adopt-evercli, logout, or disconnect-agent",
+    )
   }
   match name {
     "login" => auth_login(selected)
     "status" => auth_status(selected)
     "adopt-evercli" => auth_adopt(selected)
     "logout" => auth_logout(selected)
+    "disconnect-agent" => auth_disconnect(selected)
     _ => usage("unknown auth subcommand: \{name}")
   }
 }
@@ -329,5 +332,52 @@ async fn auth_logout(m : @argparse.Matches) -> Int32 {
     "logged out; the credential was removed from \{paths.credentials_file()}",
     { "loggedIn": false, "credentialsFile": Json(paths.credentials_file()) },
   )
+  0
+}
+
+///|
+/// `everme auth disconnect-agent --agent-id <id>` — retire an agent on this
+/// account, e.g. one this CLI registered under a label it no longer wants. When
+/// it is our own agent, the stored token goes with it: a token for a
+/// disconnected agent is exactly the stale identity this CLI refuses to keep.
+async fn auth_disconnect(m : @argparse.Matches) -> Int32 {
+  let paths = @config.Paths::resolve()
+  let settings = @config.Settings::resolve()
+  let machine = machine_of(m)
+  let base = base_of(m, settings)
+  let creds = @creds.Credentials::load(paths.credentials_file())
+  if !creds.has_api_key() {
+    not_logged_in(
+      "no API key stored, so this agent cannot be disconnected", "run `everme auth login` first",
+    )
+  }
+  let agent_id = value_of(m, "agent-id")
+  if agent_id.is_empty() {
+    usage(
+      "pass --agent-id <id>; `everme doctor` prints this CLI's own agent id",
+    )
+  }
+  let client = @api.Client::new(base~).with_token(creds.api_key)
+  client.disconnect_agent(agent_id)
+  let mine = creds.agent_id == agent_id
+  if mine {
+    creds.agent_id = ""
+    creds.agent_token = ""
+    creds.platform = ""
+    creds.token_prefix = ""
+    creds.save(paths.credentials_file()) catch {
+      _ => ()
+    }
+  }
+  let text = if mine {
+    "disconnected agent \{agent_id} and forgot its token; run `everme doctor --probe-platform` to register a fresh one"
+  } else {
+    "disconnected agent \{agent_id}; this CLI's own credential is unchanged"
+  }
+  emit(machine, text, {
+    "agentId": Json(agent_id),
+    "disconnected": true,
+    "wasThisCli": Json(mine),
+  })
   0
 }

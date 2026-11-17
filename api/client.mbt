@@ -221,3 +221,14 @@ pub async fn Client::register_agent(
     source_id: string_field(result, "sourceId"),
   }
 }
+
+///|
+/// `POST /agents/disconnect` — retire one of this account's agents. Used to
+/// clean up an agent this CLI registered under a label it no longer wants, so
+/// the account's agent list keeps telling the truth.
+pub async fn Client::disconnect_agent(
+  self : Client,
+  agent_id : String,
+) -> Unit raise ApiError {
+  ignore(self.request("/agents/disconnect", { "agentId": Json(agent_id) }))
+}
