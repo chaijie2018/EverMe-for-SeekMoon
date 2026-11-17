@@ -1,0 +1,28 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "seekmoon/everme/cli"
+
+import {
+  "moonbitlang/core/json",
+  "seekmoon/everme/api",
+}
+
+// Values
+pub fn error_envelope(@api.Failure) -> @json.Json
+
+pub fn exit_code(String) -> Int32
+
+pub fn is_local(String) -> Bool
+
+pub fn machine_format(String) -> Bool raise
+
+pub fn ok_envelope(@json.Json) -> @json.Json
+
+pub fn render_failure(@api.Failure) -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
