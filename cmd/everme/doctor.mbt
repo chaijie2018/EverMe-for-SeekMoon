@@ -123,6 +123,21 @@ fn exchange_ok(exchange : @api.Exchange) -> Bool {
 }
 
 ///|
+/// `field` of the agent-list row whose `id` is `agent_id`, or "".
+fn listed_field(
+  items : Array[Json],
+  agent_id : String,
+  field : String,
+) -> String {
+  for item in items {
+    if @api.string_field(item, "id") == agent_id {
+      return @api.string_field(item, field)
+    }
+  }
+  ""
+}
+
+///|
 /// The token prefix to verify against. A store written before prefixes were
 /// recorded still has the token itself, and the backend's `tokenPrefix` is that
 /// token's first eight characters — the same rule redaction uses.
@@ -218,10 +233,22 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
           items,
         ) {
         Ok(_) => {
-          // A store written before prefixes were recorded still passes on the
-          // agent id; record the prefix now so the next run can be strict.
+          // A store written before prefixes and labels were recorded still
+          // passes on the agent id; record what the backend says now, so the
+          // next run can be strict about both.
+          let mut changed = false
           if creds.token_prefix.is_empty() && !creds.agent_token.is_empty() {
             creds.token_prefix = effective_prefix(creds)
+            changed = true
+          }
+          if creds.platform.is_empty() {
+            let recorded = listed_field(items, creds.agent_id, "platform")
+            if !recorded.is_empty() {
+              creds.platform = recorded
+              changed = true
+            }
+          }
+          if changed {
             creds.save(paths.credentials_file()) catch {
               _ => ()
             }
