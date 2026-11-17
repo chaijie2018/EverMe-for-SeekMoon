@@ -117,9 +117,18 @@ fn Check::json(self : Check) -> Json {
 }
 
 ///|
-/// Whether an envelope-carrying exchange succeeded.
-fn exchange_ok(exchange : @api.Exchange) -> Bool {
-  exchange.http_status < 300 && exchange.envelope.is_ok()
+/// How many of this machine's agents for a platform are actually usable.
+/// `POST /agents/list` keeps disconnected agents in its result, so a row alone
+/// does not mean "already registered" — only a connected one does.
+fn connected_agents(items : Array[Json]) -> Int32 {
+  let mut count = 0
+  for item in items {
+    let status = @api.string_field(item, "connectionStatus")
+    if status.is_empty() || status == "connected" {
+      count = count + 1
+    }
+  }
+  count
 }
 
 ///|
@@ -301,21 +310,24 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
       "machineFingerprint": Json(fingerprint),
     })
     let mut existing = 0
+    let mut total = 0
     if exchange_ok(listed) {
-      existing = match listed.envelope.result {
+      let items : Array[Json] = match listed.envelope.result {
         Object(fields) =>
           match fields.get("items") {
-            Some(Array(items)) => items.length()
-            _ => 0
+            Some(Array(items)) => items
+            _ => []
           }
-        _ => 0
+        _ => []
       }
+      existing = connected_agents(items)
+      total = items.length()
       checks.push(
         Check::ok(
           "agents/list",
           listed.http_status,
           listed.envelope.status,
-          "platform \"\{platform}\"  existing agents: \{existing}",
+          "platform \"\{platform}\"  connected agents: \{existing} of \{total}",
         ),
       )
     } else {
@@ -335,43 +347,56 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
       checks.push(Check::skipped("agents", "--no-register was passed"))
       verdict = "inconclusive: registration was skipped"
     } else {
-      let registered = client.attempt("/agents", {
-        "platform": Json(platform),
-        "name": "SeekMoon",
-        "clientVersion": Json(@config.Version),
-        "machineFingerprint": Json(fingerprint),
-      })
-      if exchange_ok(registered) {
-        let result = registered.envelope.result
-        let agent_id = @api.string_field(result, "agentId")
-        let agent_token = @api.string_field(result, "agentToken")
-        // Registration is what `install` will do too: keep the token so it is
-        // not a slot we minted and threw away, together with the label and the
-        // prefix that let a later run prove the token is still ours.
-        creds.agent_id = agent_id
-        creds.agent_token = agent_token
-        creds.platform = platform
-        creds.token_prefix = @api.string_field(result, "tokenPrefix")
-        creds.save(paths.credentials_file()) catch {
-          _ => ()
-        }
-        checks.push(
-          Check::ok(
-            "agents",
-            registered.http_status,
-            registered.envelope.status,
-            "agentId=\{agent_id}  token=\{@redact.mask(agent_token)}",
-          ),
-        )
-        verdict = "accepted: the backend registered platform \"\{platform}\""
-      } else {
-        let failure = @api.failure_of(registered)
-        checks.push(Check::failed("agents", failure, ""))
-        verdict = if failure.http_status >= 500 || failure.http_status == 0 {
-          "inconclusive: the backend answered \{failure.message}"
+      // The label is negotiated here: `seekmoon` first, then the neutral
+      // fallback, and only on a value rejection. Every attempt is reported, so
+      // the label this CLI actually registered under is never a secret.
+      let (attempts, registered) = register_with_fallback(
+        client,
+        fingerprint,
+        platform,
+        @config.FallbackPlatform,
+        "SeekMoon",
+      )
+      for attempt in attempts {
+        if attempt.accepted {
+          checks.push(
+            Check::ok(
+              "agents",
+              attempt.http_status,
+              attempt.status,
+              "platform \"\{attempt.platform}\" accepted  agentId=\{registered.agent_id}  token=\{@redact.mask(registered.agent_token)}",
+            ),
+          )
         } else {
-          "rejected: platform \"\{platform}\" was refused (see the error above); retry with `--platform <value>`"
+          checks.push(
+            Check::failed(
+              "agents",
+              {
+                kind: "invalid_args",
+                message: attempt.error,
+                hint: "this label is not in the backend's known_platform",
+                http_status: attempt.http_status,
+                code: attempt.status,
+                request_id: attempt.request_id,
+              },
+              "platform \"\{attempt.platform}\" rejected, trying the next label",
+            ),
+          )
         }
+      }
+      // Keep what we minted: the agent, its token, and the label/prefix that
+      // let a later run prove the token is still ours.
+      creds.agent_id = registered.agent_id
+      creds.agent_token = registered.agent_token
+      creds.platform = registered.platform
+      creds.token_prefix = registered.token_prefix
+      creds.save(paths.credentials_file()) catch {
+        _ => ()
+      }
+      verdict = if registered.platform == platform {
+        "accepted: the backend registered platform \"\{registered.platform}\""
+      } else {
+        "accepted under the fallback label \"\{registered.platform}\" (\"\{platform}\" is not a known_platform)"
       }
     }
   }

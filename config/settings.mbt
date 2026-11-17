@@ -13,6 +13,13 @@ pub const DefaultApiBase : String = "https://api.everme.evermind.ai"
 pub const DefaultPlatform : String = "seekmoon"
 
 ///|
+/// The label to negotiate down to when the backend refuses `DefaultPlatform`
+/// as a value. `evercli` is what upstream's own CLI registers in `auth login`,
+/// so it reads as "some command-line client" rather than impersonating another
+/// product; the managed backend accepts it.
+pub const FallbackPlatform : String = "evercli"
+
+///|
 /// The version this build reports to EverMe and in its own `--version`.
 pub const Version : String = "0.1.0"
 

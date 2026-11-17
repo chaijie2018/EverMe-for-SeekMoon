@@ -1,12 +1,39 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "seekmoon/everme/cmd/everme"
 
+import {
+  "seekmoon/everme/api",
+}
+
 // Values
+pub fn exchange_ok(@api.Exchange) -> Bool
+
+pub fn label_rejected(@api.Failure) -> Bool
+
+pub fn platform_candidates(String, String) -> Array[String]
+
+pub async fn register_with_fallback(@api.Client, String, String, String, String) -> (Array[Attempt], Registered)
 
 // Errors
 
 // Types and methods
+pub(all) struct Attempt {
+  platform : String
+  accepted : Bool
+  http_status : Int32
+  status : Int32
+  error : String
+  request_id : String
+}
+
 type Check
+
+pub(all) struct Registered {
+  platform : String
+  agent_id : String
+  agent_token : String
+  token_prefix : String
+}
 
 // Type aliases
 
