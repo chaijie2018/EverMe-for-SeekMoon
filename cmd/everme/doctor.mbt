@@ -406,7 +406,14 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
   let text = StringBuilder()
   text.write_string("everme doctor\n")
   text.write_string("  api      \{base}\n")
-  text.write_string("  platform \"\{platform}\"\n")
+  // Two different labels belong in one report and must never be confused: the
+  // one we asked for (`--platform`) and the one our stored agent actually has.
+  text.write_string(
+    "  want     \"\{platform}\"   (--platform / EVERME_PLATFORM: the label a probe registers under)\n",
+  )
+  text.write_string(
+    "  ours     \{if creds.has_agent_token() { "\"\{if creds.platform.is_empty() { "unrecorded" } else { creds.platform }}\"  agent=\{creds.agent_id}  token=\{effective_prefix(creds)}" } else { "none  (no agent registered by this CLI yet)" }}\n",
+  )
   text.write_string("  machine  \{fingerprint[:12]}…\n\n")
   for index, check in checks {
     text.write_string(check.render(index + 1, total))
@@ -417,7 +424,9 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
   }
   let data : Json = {
     "api": Json(base),
-    "platform": Json(platform),
+    "requestedPlatform": Json(platform),
+    "agentPlatform": Json(creds.platform),
+    "agentId": Json(creds.agent_id),
     "fingerprint": Json(fingerprint),
     "probed": Json(probe),
     "verdict": Json(verdict),
