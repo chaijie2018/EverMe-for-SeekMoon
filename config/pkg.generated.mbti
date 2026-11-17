@@ -1,0 +1,39 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "seekmoon/everme/config"
+
+// Values
+pub const DefaultApiBase : String = "https://api.everme.evermind.ai"
+
+pub const DefaultPlatform : String = "seekmoon"
+
+pub const Version : String = "0.1.0"
+
+pub fn api_root(String) -> String raise
+
+pub fn env_or(String, String) -> String
+
+pub fn home() -> String raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Paths {
+  config_dir : String
+  data_dir : String
+  cache_dir : String
+}
+pub fn Paths::account_file(Self) -> String
+pub fn Paths::credentials_file(Self) -> String
+pub fn Paths::device_session_file(Self) -> String
+pub fn Paths::machine_file(Self) -> String
+pub fn Paths::resolve() -> Self raise
+
+pub(all) struct Settings {
+  api_base : String
+  platform : String
+}
+pub fn Settings::resolve() -> Self
+
+// Type aliases
+
+// Traits
