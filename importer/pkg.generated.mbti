@@ -1,0 +1,59 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "seekmoon/everme/importer"
+
+import {
+  "moonbitlang/core/json",
+  "seekmoon/everme/api",
+}
+
+// Values
+pub fn conversation_id(String) -> String
+
+pub fn last_sequence(Array[Turn], Int32) -> Int32
+
+pub fn message_of(Turn) -> @json.Json
+
+pub fn parse_turns(String) -> Array[Turn]
+
+pub async fn run(ImportOptions, @api.Client) -> ImportReport
+
+pub fn since(Array[Turn], Int32) -> Array[Turn]
+
+// Errors
+
+// Types and methods
+pub(all) struct ImportOptions {
+  store : String
+  state_file : String
+  since_days : Int32
+  limit : Int32
+  batch_size : Int32
+  dry_run : Bool
+}
+
+pub(all) struct ImportReport {
+  store : String
+  sessions : Array[SessionReport]
+  imported_sessions : Int32
+  imported_turns : Int32
+  batches : Int32
+}
+
+pub(all) struct SessionReport {
+  id : String
+  turns : Int32
+  state : String
+}
+
+pub(all) struct Turn {
+  sequence : Int32
+  role : String
+  content : String
+  tool_call_id : String
+  tool_calls : Array[@json.Json]
+  timestamp : Int64
+}
+
+// Type aliases
+
+// Traits

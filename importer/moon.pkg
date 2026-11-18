@@ -1,0 +1,12 @@
+import {
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "seekmoon/everme/api",
+}
+
+supported_targets = "+native"
+
+options(
+  "allow-experimental-packages": [ "moonbitlang/core/async/fs" ],
+)
