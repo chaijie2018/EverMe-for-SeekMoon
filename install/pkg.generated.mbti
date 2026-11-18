@@ -1,0 +1,86 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "seekmoon/everme/install"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+pub const ServerName : String = "everme-memory"
+
+pub const SkillConfigFileName : String = "mcp.json"
+
+pub const SkillDirName : String = "everme-memory"
+
+pub const SkillFileName : String = "SKILL.md"
+
+pub fn agents_block() -> String
+
+pub fn check_mode(String) -> Unit raise
+
+pub fn has_agents_block(String) -> Bool
+
+pub async fn install(InstallOptions) -> InstallReport
+
+pub fn merge_server(String?, String) -> String raise
+
+pub fn remove_agents_block(String) -> String?
+
+pub fn remove_server(String) -> String? raise
+
+pub fn render_document(@json.Json) -> String
+
+pub fn resolve_command(String, String, String) -> String raise
+
+pub fn server_entry(String) -> @json.Json
+
+pub fn skill_config(String) -> String
+
+pub fn skill_markdown() -> String
+
+pub async fn uninstall(InstallOptions) -> UninstallReport
+
+pub fn upsert_agents_block(String, String) -> String
+
+pub fn wants_mcp_config(String) -> Bool
+
+pub fn wants_skill(String) -> Bool
+
+// Errors
+
+// Types and methods
+pub(all) struct InstallOptions {
+  skills_dir : String
+  mcp_config : String
+  mode : String
+  agents_md : String
+  command : String
+  dry_run : Bool
+}
+
+pub(all) struct InstallReport {
+  skill_dir : String
+  skill_written : Bool
+  mcp_config : String
+  mcp_written : Bool
+  backup : String
+  agents_md : String
+  agents_md_written : Bool
+  agents_md_created : Bool
+  notes : Array[String]
+}
+
+pub(all) struct UninstallReport {
+  skill_dir : String
+  skill_removed : Bool
+  mcp_config : String
+  mcp_entry_removed : Bool
+  agents_md : String
+  agents_md_block_removed : Bool
+  agents_md_deleted : Bool
+  notes : Array[String]
+}
+
+// Type aliases
+
+// Traits
