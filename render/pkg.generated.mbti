@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "seekmoon/everme/render"
+
+import {
+  "seekmoon/everme/api",
+}
+
+// Values
+pub fn empty_search_note(String) -> String
+
+pub fn profile_markdown(@api.ContextBundle) -> String
+
+pub fn search_markdown(@api.SearchBundle) -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
