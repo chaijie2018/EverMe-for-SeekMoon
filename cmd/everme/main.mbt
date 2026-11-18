@@ -192,6 +192,51 @@ fn root_command() -> @argparse.Command {
         ],
       ),
       Command(
+        "import",
+        about="Bring existing history into EverMe.",
+        subcommand_required=true,
+        disable_help_subcommand=true,
+        subcommands=[
+          Command(
+            "sessions",
+            about="Import this machine's SeekMoon sessions, incrementally.",
+            options=[
+              @argparse.OptionArg(
+                "store",
+                long="store",
+                default_values=[""],
+                about="Session store to read (default: this workspace's .openseek/sessions, else $HOME/.openseek/sessions).",
+              ),
+              @argparse.OptionArg(
+                "since-days",
+                long="since-days",
+                default_values=[""],
+                about="Only sessions modified within this many days (default: all).",
+              ),
+              @argparse.OptionArg(
+                "limit",
+                long="limit",
+                default_values=[""],
+                about="Import at most this many sessions (default: all).",
+              ),
+              @argparse.OptionArg(
+                "batch",
+                long="batch",
+                default_values=[""],
+                about="Turns per request (default 100; the gateway caps a request at 500).",
+              ),
+            ],
+            flags=[
+              @argparse.FlagArg(
+                "dry-run",
+                long="dry-run",
+                about="Report what would be sent; write nothing and reach no backend.",
+              ),
+            ],
+          ),
+        ],
+      ),
+      Command(
         "mcp",
         about="Serve EverMe memory over MCP (stdio), or self-check it.",
         subcommand_required=true,
@@ -278,6 +323,7 @@ async fn run_command(name : String, m : @argparse.Matches) -> Int32 {
     "auth" => auth_command(m)
     "install" => install_command(m)
     "uninstall" => uninstall_command(m)
+    "import" => import_command(m)
     "mcp" => mcp_command(m)
     "doctor" => doctor_command(m)
     _ => usage("unknown subcommand: \{name}")
