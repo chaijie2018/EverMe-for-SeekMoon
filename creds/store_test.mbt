@@ -2,6 +2,27 @@
 // read back what an earlier run (or the upstream CLI) left there.
 
 ///|
+/// Delete `dir` and everything under it. `@fs.remove` refuses a non-empty
+/// directory and `rmdir` is deprecated, so the tree is walked breadth-first here
+/// — test cleanup should not be the one place that needs a deprecated API.
+async fn purge(dir : String) -> Unit {
+  let entries = @fs.readdir(dir) catch { _ => return }
+  for entry in entries {
+    let path = dir + "/" + entry
+    let kind = @fs.kind(path) catch { _ => Unknown }
+    if kind is Directory {
+      purge(path)
+    }
+    @fs.remove(path) catch {
+      _ => ()
+    }
+  }
+  @fs.remove(dir) catch {
+    _ => ()
+  }
+}
+
+///|
 /// A token-shaped secret, so the tests exercise real-looking values.
 let sample_api_key : String = "emk_507d1234567890abcdef1234567890ab"
 
@@ -12,7 +33,7 @@ let sample_agent_token : String = "evt_abcd1234567890abcdef1234567890ab"
 ///|
 async test "credentials round-trip through the store" {
   let dir = @fs.tmpdir(prefix="everme-creds-")
-  defer @fs.rmdir(dir, recursive=true)
+  defer @async.protect_from_cancel(() => purge(dir))
   let path = dir + "/credentials.json"
   let creds : @creds.Credentials = {
     api_key: sample_api_key,
@@ -35,7 +56,7 @@ async test "credentials round-trip through the store" {
 ///|
 async test "an absent store reads as empty rather than failing" {
   let dir = @fs.tmpdir(prefix="everme-creds-")
-  defer @fs.rmdir(dir, recursive=true)
+  defer @async.protect_from_cancel(() => purge(dir))
   let loaded = @creds.Credentials::load(dir + "/missing.json")
   assert_false(loaded.has_api_key())
   assert_false(loaded.has_agent_token())
@@ -45,7 +66,7 @@ async test "an absent store reads as empty rather than failing" {
 ///|
 async test "a corrupt store reads as empty so login can repair it" {
   let dir = @fs.tmpdir(prefix="everme-creds-")
-  defer @fs.rmdir(dir, recursive=true)
+  defer @async.protect_from_cancel(() => purge(dir))
   let path = dir + "/credentials.json"
   @fs.write_text(path, "{not json")
   assert_false(@creds.Credentials::load(path).has_api_key())
@@ -54,7 +75,7 @@ async test "a corrupt store reads as empty so login can repair it" {
 ///|
 async test "no temp file is left behind by a save" {
   let dir = @fs.tmpdir(prefix="everme-creds-")
-  defer @fs.rmdir(dir, recursive=true)
+  defer @async.protect_from_cancel(() => purge(dir))
   let path = dir + "/credentials.json"
   let creds : @creds.Credentials = {
     api_key: sample_api_key,
@@ -87,7 +108,7 @@ test "the summary never shows a usable secret" {
 ///|
 async test "adopt-evercli takes the account key and never the agent token" {
   let home = @fs.tmpdir(prefix="everme-home-")
-  defer @fs.rmdir(home, recursive=true)
+  defer @async.protect_from_cancel(() => purge(home))
   @fs.mkdir(home + "/.local/share/evercli", recursive=true)
   @fs.write_text(
     home + "/.local/share/evercli/credentials.json",
@@ -105,7 +126,7 @@ async test "adopt-evercli takes the account key and never the agent token" {
 ///|
 async test "adopt-evercli refuses a file that only holds an agent token" {
   let home = @fs.tmpdir(prefix="everme-home-")
-  defer @fs.rmdir(home, recursive=true)
+  defer @async.protect_from_cancel(() => purge(home))
   @fs.mkdir(home + "/.local/share/evercli", recursive=true)
   @fs.write_text(
     home + "/.local/share/evercli/credentials.json",
@@ -117,14 +138,14 @@ async test "adopt-evercli refuses a file that only holds an agent token" {
 ///|
 async test "adopt-evercli reports nothing when evercli never logged in" {
   let home = @fs.tmpdir(prefix="everme-home-")
-  defer @fs.rmdir(home, recursive=true)
+  defer @async.protect_from_cancel(() => purge(home))
   assert_true(@creds.adopt_evercli(home) is None)
 }
 
 ///|
 async test "adopt-evercli tolerates a corrupt evercli file" {
   let home = @fs.tmpdir(prefix="everme-home-")
-  defer @fs.rmdir(home, recursive=true)
+  defer @async.protect_from_cancel(() => purge(home))
   @fs.mkdir(home + "/.local/share/evercli", recursive=true)
   @fs.write_text(home + "/.local/share/evercli/credentials.json", "nope")
   assert_true(@creds.adopt_evercli(home) is None)
@@ -133,7 +154,7 @@ async test "adopt-evercli tolerates a corrupt evercli file" {
 ///|
 async test "the machine id is stable across calls" {
   let dir = @fs.tmpdir(prefix="everme-machine-")
-  defer @fs.rmdir(dir, recursive=true)
+  defer @async.protect_from_cancel(() => purge(dir))
   let path = dir + "/machine.json"
   let first = @creds.machine_id(path)
   let second = @creds.machine_id(path)
