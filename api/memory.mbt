@@ -155,22 +155,30 @@ pub async fn Client::save_personal(
 /// `POST /mem/agent-memory` — a trajectory, split into batches the gateway
 /// accepts. Only the last batch carries the caller's `flush`, so extraction sees
 /// the complete session rather than a prefix.
+///
+/// `batch_size` is ours to choose below the gateway's cap of 500: a batch of
+/// long turns is megabytes, and the gateway will not always finish it inside the
+/// request deadline. An importer that ships history passes something smaller and
+/// keeps its own cursor per batch.
 pub async fn Client::save_agent_memory(
   self : Client,
   conversation_id~ : String,
   messages~ : Array[Json],
   flush~ : Bool,
+  batch_size~ : Int32 = MaxMessagesPerRequest,
 ) -> (Json, String) raise ApiError {
-  let batch_count = if messages.is_empty() {
+  let size = if batch_size <= 0 { MaxMessagesPerRequest } else { batch_size }
+  let message_count = messages.length()
+  let batch_count = if message_count == 0 {
     1
   } else {
-    (messages.length() + MaxMessagesPerRequest - 1) / MaxMessagesPerRequest
+    (message_count + size - 1) / size
   }
   let mut last : Json = Json::null()
   let mut last_request_id = ""
   for batch in 0..<batch_count {
-    let start = batch * MaxMessagesPerRequest
-    let end = (start + MaxMessagesPerRequest).min(messages.length())
+    let start = batch * size
+    let end = (start + size).min(message_count)
     let slice : Array[Json] = []
     for index in start..<end {
       slice.push(messages[index])

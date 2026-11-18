@@ -58,6 +58,7 @@ pub(all) struct AgentInfo {
 pub(all) struct Client {
   base : String
   token : String
+  timeout_ms : Int32
 }
 pub async fn Client::attempt(Self, String, @json.Json) -> Exchange raise ApiError
 pub fn Client::base(Self) -> String
@@ -70,9 +71,10 @@ pub async fn Client::login(Self, String) -> LoginInfo raise ApiError
 pub fn Client::new(base~ : String) -> Self
 pub async fn Client::register_agent(Self, platform~ : String, name~ : String, client_version~ : String, fingerprint~ : String) -> AgentInfo raise ApiError
 pub async fn Client::request(Self, String, @json.Json) -> Exchange raise ApiError
-pub async fn Client::save_agent_memory(Self, conversation_id~ : String, messages~ : Array[@json.Json], flush~ : Bool) -> (@json.Json, String) raise ApiError
+pub async fn Client::save_agent_memory(Self, conversation_id~ : String, messages~ : Array[@json.Json], flush~ : Bool, batch_size? : Int32) -> (@json.Json, String) raise ApiError
 pub async fn Client::save_personal(Self, conversation_id~ : String, messages~ : Array[@json.Json], flush~ : Bool) -> (@json.Json, String) raise ApiError
 pub async fn Client::search(Self, query~ : String, top_k~ : Int32) -> SearchBundle raise ApiError
+pub fn Client::with_timeout(Self, Int32) -> Self
 pub fn Client::with_token(Self, String) -> Self
 
 pub(all) struct ContextBundle {

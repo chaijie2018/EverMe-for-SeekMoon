@@ -5,7 +5,8 @@
 // `doctor --probe-platform` useful instead of guesswork.
 
 ///|
-/// Deadline for one HTTP exchange. Upstream uses the same 30s for memory calls.
+/// Deadline for one HTTP exchange. Upstream uses the same 30s for memory calls;
+/// a caller that ships a large payload (an import batch) raises it per client.
 const RequestTimeoutMs : Int32 = 30000
 
 ///|
@@ -14,23 +15,31 @@ const RequestTimeoutMs : Int32 = 30000
 const UserAgent : String = "everme-cli/0.1.0 (seekmoon)"
 
 ///|
-/// Honestly, a client is just a base URL and the token to present. The token is
-/// empty for the unauthenticated auth endpoints.
+/// Honestly, a client is a base URL, the token to present, and how long to wait.
+/// The token is empty for the unauthenticated auth endpoints.
 pub(all) struct Client {
   base : String
   token : String
+  timeout_ms : Int32
 }
 
 ///|
 /// A client for `base` (already normalized to `…/api/v1`), unauthenticated.
 pub fn Client::new(base~ : String) -> Client {
-  { base, token: "", }
+  { base, token: "", timeout_ms: RequestTimeoutMs, }
 }
 
 ///|
 /// The same client, now presenting `token` as a Bearer credential.
 pub fn Client::with_token(self : Client, token : String) -> Client {
-  { base: self.base, token, }
+  { base: self.base, token, timeout_ms: self.timeout_ms, }
+}
+
+///|
+/// The same client, waiting `timeout_ms` for each exchange. A large POST (an
+/// import batch of long turns) legitimately takes longer than a point query.
+pub fn Client::with_timeout(self : Client, timeout_ms : Int32) -> Client {
+  { base: self.base, token: self.token, timeout_ms, }
 }
 
 ///|
@@ -59,7 +68,7 @@ async fn raw_post(
   let url = client.base + path
   let payload = body.stringify()
   let attempt = () => @http.post_text(url, payload, headers~)
-  let outcome = @async.with_timeout_opt(RequestTimeoutMs, attempt) catch {
+  let outcome = @async.with_timeout_opt(client.timeout_ms, attempt) catch {
     error => raise ApiError(network_failure("\{error}"))
   }
   match outcome {
@@ -70,7 +79,7 @@ async fn raw_post(
     None =>
       raise ApiError(
         network_failure(
-          "no answer from \{url} within \{RequestTimeoutMs / 1000}s",
+          "no answer from \{url} within \{client.timeout_ms / 1000}s",
         ),
       )
   }
