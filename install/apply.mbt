@@ -5,6 +5,10 @@
 // only touched between our markers, and removal deletes only what this CLI writes.
 
 ///|
+/// File mode `0755`: executable, so a copied binary can be launched.
+const ModeExecutable : Int32 = 493
+
+///|
 /// Where to install, and how.
 pub(all) struct InstallOptions {
   /// `~/.openseek/skills` unless overridden.
@@ -113,6 +117,53 @@ async fn write_text(path : String, text : String) -> Unit {
         request_id: "",
       })
   }
+}
+
+///|
+/// Copy this CLI's own binary to `directory` and return the copy's path.
+///
+/// A path inside `_build` is a build artifact: `moon clean`, a rebuild, or a moved
+/// checkout takes the server with it, and the host only finds out later as a failed
+/// connection. Copying once to a stable directory — `~/.local/bin`, say — lets the
+/// `mcp.json` entry outlive the build tree. The copy is made executable.
+pub async fn copy_binary(source : String, directory : String) -> String {
+  let bytes = @fs.read_binary(source) catch {
+    error =>
+      raise @api.ApiError({
+        kind: "io",
+        message: "cannot read this binary at \{source}: \{error}",
+        hint: "pass --command <path> to name it explicitly",
+        http_status: 0,
+        code: 0,
+        request_id: "",
+      })
+  }
+  @fs.mkdir(directory, recursive=true, allow_existing=true) catch {
+    error =>
+      raise @api.ApiError({
+        kind: "io",
+        message: "cannot create \{directory}: \{error}",
+        hint: "check permissions, or pass --copy-to somewhere else",
+        http_status: 0,
+        code: 0,
+        request_id: "",
+      })
+  }
+  let target = directory + "/everme"
+  @fs.write_binary(target, bytes, permission=ModeExecutable) catch {
+    error =>
+      raise @api.ApiError({
+        kind: "io",
+        message: "cannot write \{target}: \{error}",
+        hint: "check permissions on that directory",
+        http_status: 0,
+        code: 0,
+        request_id: "",
+      })
+  }
+  // Some filesystems drop the mode on write; make it explicit.
+  ignore(@fs.chmod(target, ModeExecutable) catch { _ => () })
+  target
 }
 
 ///|

@@ -45,6 +45,12 @@ fn install_options() -> Array[@argparse.OptionArg] {
       default_values=[""],
       about="Path of the binary mcp.json should launch (default: this executable's path).",
     ),
+    @argparse.OptionArg(
+      "copy-to",
+      long="copy-to",
+      default_values=[""],
+      about="Copy this binary into that directory and record the copy (e.g. ~/.local/bin), so mcp.json does not point into _build.",
+    ),
   ]
 }
 

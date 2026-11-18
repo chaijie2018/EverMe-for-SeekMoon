@@ -99,7 +99,18 @@ async fn install_command(selected : @argparse.Matches) -> Int32 {
     "" => default_mcp_config()
     path => path
   }
-  let command = command_path(selected)
+  let mut command = command_path(selected)
+  let copy_to = value_of(selected, "copy-to")
+  let mut copied = ""
+  if !copy_to.is_empty() {
+    if dry_run {
+      copied = copy_to + "/everme"
+      command = copied
+    } else {
+      copied = @install.copy_binary(command, copy_to)
+      command = copied
+    }
+  }
   let report = @install.install({
     skills_dir,
     mcp_config,
@@ -111,6 +122,11 @@ async fn install_command(selected : @argparse.Matches) -> Int32 {
   let text = StringBuilder()
   text.write_string("everme install\n")
   text.write_string("  command  \{command}\n")
+  if !copied.is_empty() {
+    text.write_string(
+      "  copy     \{if dry_run { "would copy to" } else { "copied to" }} \{copied}\n",
+    )
+  }
   text.write_string(
     "  agent    \{if agent_id.is_empty() { "none yet" } else { agent_id }}\{if registered { "  (registered now)" } else if agent_id.is_empty() { "" } else { "  (already stored)" }}\n",
   )
@@ -148,7 +164,7 @@ async fn install_command(selected : @argparse.Matches) -> Int32 {
   // failed connection. Say so at install time.
   if command.contains("/_build/") {
     text.write_string(
-      "  note     this path is a build artifact; `moon install` writes a stable copy under ~/.moon/bin — pass --command to use it\n",
+      "  note     this path is a build artifact; pass --copy-to ~/.local/bin to keep a stable copy out of _build\n",
     )
   }
   if !dry_run && report.skill_written {
@@ -165,6 +181,7 @@ async fn install_command(selected : @argparse.Matches) -> Int32 {
     "skillWritten": Json(report.skill_written),
     "mcpConfig": Json(report.mcp_config),
     "mcpWritten": Json(report.mcp_written),
+    "copiedTo": Json(copied),
     "backup": Json(report.backup),
     "agentsMd": Json(report.agents_md),
     "agentsMdWritten": Json(report.agents_md_written),

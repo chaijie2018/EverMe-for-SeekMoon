@@ -235,3 +235,35 @@ test "the rendered config parses back to the same document" {
   assert_true(rendered.contains("\n  \"a\": 1"))
   assert_eq(@json.parse(rendered).stringify(), document.stringify())
 }
+
+///|
+async test "copying the binary writes an executable copy outside _build" {
+  let dir = @fs.tmpdir(prefix="everme-copy-")
+  defer @async.protect_from_cancel(() => purge(dir))
+  let source = dir + "/source.bin"
+  @fs.write_text(source, "#!/bin/sh\necho hi\n")
+  let target = @install.copy_binary(source, dir + "/bin")
+  assert_eq(target, dir + "/bin/everme")
+  assert_true(@fs.exists(target) catch { _ => false })
+  assert_eq(@fs.read_text(target) catch { _ => "" }, "#!/bin/sh\necho hi\n")
+  assert_true(@fs.can_execute(target) catch { _ => false })
+}
+
+///|
+/// Delete `dir` and everything under it, for test cleanup.
+async fn purge(dir : String) -> Unit {
+  let entries = @fs.readdir(dir) catch { _ => return }
+  for entry in entries {
+    let path = dir + "/" + entry
+    let kind = @fs.kind(path) catch { _ => Unknown }
+    if kind is Directory {
+      purge(path)
+    }
+    @fs.remove(path) catch {
+      _ => ()
+    }
+  }
+  @fs.remove(dir) catch {
+    _ => ()
+  }
+}

@@ -18,6 +18,8 @@ pub fn agents_block() -> String
 
 pub fn check_mode(String) -> Unit raise
 
+pub async fn copy_binary(String, String) -> String
+
 pub fn has_agents_block(String) -> Bool
 
 pub async fn install(InstallOptions) -> InstallReport
