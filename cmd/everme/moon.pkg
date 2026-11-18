@@ -9,6 +9,7 @@ import {
   "seekmoon/everme/cli",
   "seekmoon/everme/config",
   "seekmoon/everme/creds",
+  "seekmoon/everme/install",
   "seekmoon/everme/mcp",
   "seekmoon/everme/redact",
 }
