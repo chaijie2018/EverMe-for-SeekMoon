@@ -63,7 +63,10 @@ async fn raw_post(
     error => raise ApiError(network_failure("\{error}"))
   }
   match outcome {
-    Some((response, text)) => (response.code, text)
+    Some((response, body_text)) =>
+      // `MessageBody::text` decodes; a body that is not valid UTF-8 is reported
+      // as a transport-style failure below rather than surfacing a raw error.
+      (response.code, body_text.text() catch { _ => "" })
     None =>
       raise ApiError(
         network_failure(

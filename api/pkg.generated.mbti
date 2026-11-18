@@ -6,7 +6,19 @@ import {
 }
 
 // Values
+pub const MaxMessagesPerRequest : Int32 = 500
+
+pub const QueryMaxChars : Int32 = 1024
+
+pub const TopKDefault : Int32 = 10
+
+pub const TopKMax : Int32 = 50
+
+pub fn array_field(@json.Json, String) -> Array[@json.Json]
+
 pub fn bool_field(@json.Json, String) -> Bool
+
+pub fn clamp_query(String) -> String
 
 pub fn classify(Int32) -> String
 
@@ -18,11 +30,17 @@ pub fn hint_for(String) -> String
 
 pub fn int_field(@json.Json, String) -> Int32
 
+pub fn nested_array_field(@json.Json, String, String) -> Array[@json.Json]
+
 pub fn network_failure(String) -> Failure
+
+pub fn normalize_top_k(Int32) -> Int32
 
 pub fn string_field(@json.Json, String) -> String
 
 pub fn strings_field(@json.Json, String) -> Array[String]
+
+pub fn top_k_field(@json.Json, String) -> Int32
 
 // Errors
 pub(all) suberror ApiError {
@@ -43,6 +61,7 @@ pub(all) struct Client {
 }
 pub async fn Client::attempt(Self, String, @json.Json) -> Exchange raise ApiError
 pub fn Client::base(Self) -> String
+pub async fn Client::context(Self, force_refresh~ : Bool) -> ContextBundle raise ApiError
 pub async fn Client::device_start(Self, platform~ : String, client_name~ : String, client_version~ : String, fingerprint~ : String) -> DeviceStart raise ApiError
 pub async fn Client::device_token(Self, String) -> DeviceToken raise ApiError
 pub async fn Client::disconnect_agent(Self, String) -> Unit raise ApiError
@@ -51,7 +70,17 @@ pub async fn Client::login(Self, String) -> LoginInfo raise ApiError
 pub fn Client::new(base~ : String) -> Self
 pub async fn Client::register_agent(Self, platform~ : String, name~ : String, client_version~ : String, fingerprint~ : String) -> AgentInfo raise ApiError
 pub async fn Client::request(Self, String, @json.Json) -> Exchange raise ApiError
+pub async fn Client::save_agent_memory(Self, conversation_id~ : String, messages~ : Array[@json.Json], flush~ : Bool) -> (@json.Json, String) raise ApiError
+pub async fn Client::save_personal(Self, conversation_id~ : String, messages~ : Array[@json.Json], flush~ : Bool) -> (@json.Json, String) raise ApiError
+pub async fn Client::search(Self, query~ : String, top_k~ : Int32) -> SearchBundle raise ApiError
 pub fn Client::with_token(Self, String) -> Self
+
+pub(all) struct ContextBundle {
+  context : String
+  profile : @json.Json?
+  memory_count : Int32
+  request_id : String
+}
 
 pub(all) struct DeviceStart {
   device_code : String
@@ -97,6 +126,15 @@ pub(all) struct LoginInfo {
   email : String
   api_key_prefix : String
   scopes : Array[String]
+}
+
+pub(all) struct SearchBundle {
+  memories : Array[@json.Json]
+  profiles : Array[@json.Json]
+  raw_messages : Array[@json.Json]
+  skills : Array[@json.Json]
+  cases : Array[@json.Json]
+  request_id : String
 }
 
 // Type aliases

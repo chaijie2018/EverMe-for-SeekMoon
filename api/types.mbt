@@ -148,6 +148,36 @@ pub fn strings_field(json : Json, field : String) -> Array[String] {
 }
 
 ///|
+/// Read an array field as JSON values, or `[]` when absent or not an array.
+pub fn array_field(json : Json, field : String) -> Array[Json] {
+  match json {
+    Object(fields) =>
+      match fields.get(field) {
+        Some(Array(values)) => values
+        _ => []
+      }
+    _ => []
+  }
+}
+
+///|
+/// Read `outer.inner` as an array, or `[]`.
+pub fn nested_array_field(
+  json : Json,
+  outer : String,
+  inner : String,
+) -> Array[Json] {
+  match json {
+    Object(fields) =>
+      match fields.get(outer) {
+        Some(value) => array_field(value, inner)
+        None => []
+      }
+    _ => []
+  }
+}
+
+///|
 /// Decode the envelope body. A body that is not JSON at all — an HTML error
 /// page from a proxy, say — is reported with a bounded, redacted excerpt
 /// rather than as a parse crash.
