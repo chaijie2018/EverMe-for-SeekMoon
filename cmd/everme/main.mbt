@@ -98,6 +98,22 @@ fn root_command() -> @argparse.Command {
         ],
       ),
       Command(
+        "mcp",
+        about="Serve EverMe memory over MCP (stdio), or self-check it.",
+        subcommand_required=true,
+        disable_help_subcommand=true,
+        subcommands=[
+          Command(
+            "serve",
+            about="Speak MCP on stdin/stdout — the command SeekMoon launches.",
+          ),
+          Command(
+            "test",
+            about="Self-check: the protocol answers a host would get, plus one real mem_context.",
+          ),
+        ],
+      ),
+      Command(
         "doctor",
         about="Check credentials, connectivity, and the platform label.",
         flags=[
@@ -166,6 +182,7 @@ async fn run_command(name : String, m : @argparse.Matches) -> Int32 {
   match name {
     "version" => command_version(m)
     "auth" => auth_command(m)
+    "mcp" => mcp_command(m)
     "doctor" => doctor_command(m)
     _ => usage("unknown subcommand: \{name}")
   }
