@@ -1,0 +1,102 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "seekmoon/everme/mcp"
+
+import {
+  "moonbitlang/core/json",
+  "seekmoon/everme/api",
+}
+
+// Values
+pub const CodeInternal : Int32 = -32603
+
+pub const CodeInvalidParams : Int32 = -32602
+
+pub const CodeMethodNotFound : Int32 = -32601
+
+pub const CodeParseError : Int32 = -32700
+
+pub fn array_field(@json.Json, String) -> Array[@json.Json]
+
+pub fn bool_field(@json.Json, String) -> Bool
+
+pub fn content_text(@json.Json) -> String
+
+pub fn decide(@json.Json) -> Decision
+
+pub fn describe_decision(@json.Json) -> String
+
+pub fn error_reply(@json.Json, Int32, String) -> @json.Json
+
+pub async fn execute(Action, @api.Client) -> Result[@json.Json, String]
+
+pub fn field(@json.Json, String) -> @json.Json
+
+pub fn flush_field(@json.Json) -> Bool
+
+pub fn instructions() -> String
+
+pub fn messages_arg(@json.Json) -> Array[@json.Json]
+
+pub fn normalize_messages(Array[@json.Json], allow_tools~ : Bool) -> Result[Array[@json.Json], String]
+
+pub fn parse_error_reply(String) -> @json.Json
+
+pub fn parse_failure() -> @json.Json
+
+pub fn parse_search_uri(String) -> SearchUri?
+
+pub fn percent_decode(String) -> String
+
+pub fn profile_resource() -> @json.Json
+
+pub fn reply(@json.Json, @json.Json) -> @json.Json
+
+pub fn resource_text(String, String) -> @json.Json
+
+pub fn save_report(@json.Json, String, Bool) -> String
+
+pub fn search_template() -> @json.Json
+
+pub async fn serve(@api.Client) -> Unit
+
+pub fn session_key(@json.Json) -> String
+
+pub fn single_turn(@json.Json) -> Array[@json.Json]
+
+pub fn text_field(@json.Json, String) -> String
+
+pub fn tool_error(String) -> @json.Json
+
+pub fn tool_names() -> Array[String]
+
+pub fn tool_schemas() -> Array[@json.Json]
+
+pub fn tool_text(String) -> @json.Json
+
+// Errors
+
+// Types and methods
+pub(all) enum Action {
+  Context(force_refresh~ : Bool)
+  Search(query~ : String, top_k~ : Int32)
+  SaveFact(messages~ : Array[@json.Json], session_key~ : String, flush~ : Bool)
+  SaveTurn(messages~ : Array[@json.Json], session_key~ : String, flush~ : Bool)
+  Profile
+  SearchResource(query~ : String, top_k~ : Int32)
+}
+
+pub(all) enum Decision {
+  Nothing
+  Answer(id~ : @json.Json, result~ : @json.Json)
+  Fail(id~ : @json.Json, code~ : Int32, message~ : String)
+  Perform(id~ : @json.Json, action~ : Action, as_tool~ : Bool)
+}
+
+pub(all) struct SearchUri {
+  query : String
+  top_k : Int32
+}
+
+// Type aliases
+
+// Traits
