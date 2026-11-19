@@ -6,7 +6,7 @@ preferred_target = "native"
 
 readme = "README.md"
 
-repository = ""
+repository = "https://github.com/chaijie2018/EverMe-for-SeekMoon"
 
 license = "Apache-2.0"
 
