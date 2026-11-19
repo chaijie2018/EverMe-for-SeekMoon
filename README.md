@@ -75,4 +75,4 @@ eight characters).
 - Memory writes are at-least-once: an import interrupted mid-batch can repeat that
   batch. The per-batch cursor keeps everything else from being re-sent.
 
-Licensed under Apache-2.0.
+Licensed under [Apache-2.0](LICENSE).
