@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "seekmoon/everme/cmd/everme"
+package "chaijie2018/EverMe-for-SeekMoon/cmd/everme"
 
 import {
-  "seekmoon/everme/api",
+  "chaijie2018/EverMe-for-SeekMoon/api",
 }
 
 // Values

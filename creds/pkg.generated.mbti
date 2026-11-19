@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "seekmoon/everme/creds"
+package "chaijie2018/EverMe-for-SeekMoon/creds"
 
 import {
   "moonbitlang/core/json",

@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "seekmoon/everme/cli"
+package "chaijie2018/EverMe-for-SeekMoon/cli"
 
 import {
+  "chaijie2018/EverMe-for-SeekMoon/api",
   "moonbitlang/core/json",
-  "seekmoon/everme/api",
 }
 
 // Values

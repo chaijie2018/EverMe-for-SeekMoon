@@ -6,14 +6,14 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/string",
   "moonbitlang/x/sys",
-  "seekmoon/everme/api",
-  "seekmoon/everme/cli",
-  "seekmoon/everme/config",
-  "seekmoon/everme/creds",
-  "seekmoon/everme/importer",
-  "seekmoon/everme/install",
-  "seekmoon/everme/mcp",
-  "seekmoon/everme/redact",
+  "chaijie2018/EverMe-for-SeekMoon/api",
+  "chaijie2018/EverMe-for-SeekMoon/cli",
+  "chaijie2018/EverMe-for-SeekMoon/config",
+  "chaijie2018/EverMe-for-SeekMoon/creds",
+  "chaijie2018/EverMe-for-SeekMoon/importer",
+  "chaijie2018/EverMe-for-SeekMoon/install",
+  "chaijie2018/EverMe-for-SeekMoon/mcp",
+  "chaijie2018/EverMe-for-SeekMoon/redact",
 }
 
 supported_targets = "+native"

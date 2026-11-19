@@ -4,9 +4,9 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/string",
-  "seekmoon/everme/api",
-  "seekmoon/everme/config",
-  "seekmoon/everme/render",
+  "chaijie2018/EverMe-for-SeekMoon/api",
+  "chaijie2018/EverMe-for-SeekMoon/config",
+  "chaijie2018/EverMe-for-SeekMoon/render",
 }
 
 supported_targets = "+native"

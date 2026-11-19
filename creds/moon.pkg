@@ -2,7 +2,7 @@ import {
   "moonbitlang/core/async/fs",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
-  "seekmoon/everme/redact",
+  "chaijie2018/EverMe-for-SeekMoon/redact",
 }
 
 supported_targets = "+native"

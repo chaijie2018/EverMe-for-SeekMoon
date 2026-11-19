@@ -1,6 +1,6 @@
-# everme — EverMe personal memory for SeekMoon
+# EverMe-for-SeekMoon
 
-A MoonBit CLI that connects [SeekMoon](https://github.com/moonbitlang/openseek) to
+`everme` — a MoonBit CLI that connects [SeekMoon](https://github.com/moonbitlang/openseek) to
 [EverMe](https://github.com/EverMind-AI/EverMe) memory: one pool shared across the
 user's devices and agents.
 
