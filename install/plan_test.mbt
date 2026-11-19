@@ -92,6 +92,22 @@ test "the skill document declares itself and shows how to call the server" {
 }
 
 ///|
+test "the skill teaches what to do after a context checkpoint" {
+  let text = @install.skill_markdown()
+  assert_true(text.contains("## After a context checkpoint"))
+  assert_true(text.contains("[context ceiling]"))
+  assert_true(text.contains("silence is not evidence"))
+  assert_true(text.contains("`git status`"))
+  assert_true(text.contains("Never redo a finished step"))
+}
+
+///|
+test "the skill asks for saves at milestones, not only at the end" {
+  let text = @install.skill_markdown()
+  assert_true(text.contains("Save at milestones"))
+}
+
+///|
 test "merging keeps every other key and server" {
   let existing =
     #|{

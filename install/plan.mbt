@@ -154,6 +154,27 @@ pub fn skill_markdown() -> String {
     $|`mem_save_turn` (user → tool calls → results → answer). Use `mem_save_fact`
     $|for a stated preference instead of relying on the derived transcript.
     $|
+    $|Save at milestones, not only at the end. A long task can be interrupted at the
+    $|context ceiling, and whatever was never saved is then only in the compressed
+    $|summary. Saving the trajectory so far keeps the finished part out of its hands.
+    $|
+    $|## After a context checkpoint
+    $|
+    $|A turn that ends with `[context ceiling] … was checkpointed` did not hand you the
+    $|transcript: you are continuing from a summary the previous turn wrote about
+    $|itself. Summaries keep what looked important and drop parameters, boundaries and
+    $|constraints — the things that are usually the point.
+    $|
+    $|- **A summary's silence is not evidence.** Before concluding that a decision was
+    $|  never made, a step was never done, or the user never asked for something,
+    $|  check instead of assuming.
+    $|- Search first: `mem_search` with the current task's keywords, then
+    $|  `mem_context` for the user's durable constraints.
+    $|- The workspace's real state — `git status`, `git diff`, the files themselves —
+    $|  outranks any recollection, yours or the summary's.
+    $|- Resume by stating where the work actually stands and what is next, then do only
+    $|  the missing part. Never redo a finished step because the summary forgot it.
+    $|
     $|## Profile at the start of a session
     $|
     $|If no profile block was injected into this conversation and the task depends on
