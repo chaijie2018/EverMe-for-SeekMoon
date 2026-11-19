@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "seekmoon/everme/redact"
+package "chaijie2018/EverMe-for-SeekMoon/redact"
 
 // Values
 pub fn mask(String) -> String
