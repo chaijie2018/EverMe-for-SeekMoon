@@ -21,7 +21,7 @@ evercli login.
 
 ```bash
 # 1. build and install, keeping the binary outside the build tree
-moon run cmd/everme-seekmoon -- install --copy-to ~/.local/bin
+moon run --release cmd/everme-seekmoon -- install --copy-to ~/.local/bin
 
 # 2. (optional) bring earlier conversations in
 ~/.local/bin/everme-seekmoon import sessions
