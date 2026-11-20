@@ -32,7 +32,7 @@ let sample_agent_token : String = "evt_abcd1234567890abcdef1234567890ab"
 
 ///|
 async test "credentials round-trip through the store" {
-  let dir = @fs.tmpdir(prefix="everme-creds-")
+  let dir = @fs.tmpdir(prefix="everme-seekmoon-creds-")
   defer @async.protect_from_cancel(() => purge(dir))
   let path = dir + "/credentials.json"
   let creds : @creds.Credentials = {
@@ -55,7 +55,7 @@ async test "credentials round-trip through the store" {
 
 ///|
 async test "an absent store reads as empty rather than failing" {
-  let dir = @fs.tmpdir(prefix="everme-creds-")
+  let dir = @fs.tmpdir(prefix="everme-seekmoon-creds-")
   defer @async.protect_from_cancel(() => purge(dir))
   let loaded = @creds.Credentials::load(dir + "/missing.json")
   assert_false(loaded.has_api_key())
@@ -65,7 +65,7 @@ async test "an absent store reads as empty rather than failing" {
 
 ///|
 async test "a corrupt store reads as empty so login can repair it" {
-  let dir = @fs.tmpdir(prefix="everme-creds-")
+  let dir = @fs.tmpdir(prefix="everme-seekmoon-creds-")
   defer @async.protect_from_cancel(() => purge(dir))
   let path = dir + "/credentials.json"
   @fs.write_text(path, "{not json")
@@ -74,7 +74,7 @@ async test "a corrupt store reads as empty so login can repair it" {
 
 ///|
 async test "no temp file is left behind by a save" {
-  let dir = @fs.tmpdir(prefix="everme-creds-")
+  let dir = @fs.tmpdir(prefix="everme-seekmoon-creds-")
   defer @async.protect_from_cancel(() => purge(dir))
   let path = dir + "/credentials.json"
   let creds : @creds.Credentials = {
@@ -107,7 +107,7 @@ test "the summary never shows a usable secret" {
 
 ///|
 async test "adopt-evercli takes the account key and never the agent token" {
-  let home = @fs.tmpdir(prefix="everme-home-")
+  let home = @fs.tmpdir(prefix="everme-seekmoon-home-")
   defer @async.protect_from_cancel(() => purge(home))
   @fs.mkdir(home + "/.local/share/evercli", recursive=true)
   @fs.write_text(
@@ -125,7 +125,7 @@ async test "adopt-evercli takes the account key and never the agent token" {
 
 ///|
 async test "adopt-evercli refuses a file that only holds an agent token" {
-  let home = @fs.tmpdir(prefix="everme-home-")
+  let home = @fs.tmpdir(prefix="everme-seekmoon-home-")
   defer @async.protect_from_cancel(() => purge(home))
   @fs.mkdir(home + "/.local/share/evercli", recursive=true)
   @fs.write_text(
@@ -137,14 +137,14 @@ async test "adopt-evercli refuses a file that only holds an agent token" {
 
 ///|
 async test "adopt-evercli reports nothing when evercli never logged in" {
-  let home = @fs.tmpdir(prefix="everme-home-")
+  let home = @fs.tmpdir(prefix="everme-seekmoon-home-")
   defer @async.protect_from_cancel(() => purge(home))
   assert_true(@creds.adopt_evercli(home) is None)
 }
 
 ///|
 async test "adopt-evercli tolerates a corrupt evercli file" {
-  let home = @fs.tmpdir(prefix="everme-home-")
+  let home = @fs.tmpdir(prefix="everme-seekmoon-home-")
   defer @async.protect_from_cancel(() => purge(home))
   @fs.mkdir(home + "/.local/share/evercli", recursive=true)
   @fs.write_text(home + "/.local/share/evercli/credentials.json", "nope")
@@ -153,7 +153,7 @@ async test "adopt-evercli tolerates a corrupt evercli file" {
 
 ///|
 async test "the machine id is stable across calls" {
-  let dir = @fs.tmpdir(prefix="everme-machine-")
+  let dir = @fs.tmpdir(prefix="everme-seekmoon-machine-")
   defer @async.protect_from_cancel(() => purge(dir))
   let path = dir + "/machine.json"
   let first = @creds.machine_id(path)

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "chaijie2018/EverMe-for-SeekMoon/cmd/everme"
+package "chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon"
 
 import {
   "chaijie2018/EverMe-for-SeekMoon/api",

@@ -1,4 +1,4 @@
-// `everme import sessions` — cold start: put this machine's existing SeekMoon
+// `everme-seekmoon import sessions` — cold start: put this machine's existing SeekMoon
 // conversations into EverMe, so "what did we do last time?" has an answer on day
 // one. It is idempotent: a cursor per session means a second run sends only what
 // was appended since.
@@ -18,7 +18,7 @@ async fn default_store() -> String {
 }
 
 ///|
-/// `everme import <subcommand>`.
+/// `everme-seekmoon import <subcommand>`.
 async fn import_command(m : @argparse.Matches) -> Int32 {
   guard m.subcommand is Some((name, selected)) else {
     usage("`import` needs a subcommand: sessions")
@@ -61,7 +61,7 @@ fn number_of(m : @argparse.Matches, name : String) -> Int32 raise {
 }
 
 ///|
-/// `everme import sessions`.
+/// `everme-seekmoon import sessions`.
 async fn import_sessions(selected : @argparse.Matches) -> Int32 {
   let machine = machine_of(selected)
   let paths = @config.Paths::resolve()
@@ -93,7 +93,7 @@ async fn import_sessions(selected : @argparse.Matches) -> Int32 {
   }
   let report = @importer.run(options, client)
   let text = StringBuilder()
-  text.write_string("everme import sessions\n")
+  text.write_string("everme-seekmoon import sessions\n")
   text.write_string("  store    \{store}\n")
   for session in report.sessions {
     if session.turns > 0 {
@@ -109,7 +109,7 @@ async fn import_sessions(selected : @argparse.Matches) -> Int32 {
   )
   if !dry_run && report.imported_turns > 0 {
     text.write_string(
-      "Next: extraction runs in the background, so results appear over the next few minutes; `everme mcp test` shows the profile as it is now.\n",
+      "Next: extraction runs in the background, so results appear over the next few minutes; `everme-seekmoon mcp test` shows the profile as it is now.\n",
     )
   }
   let data : Json = {

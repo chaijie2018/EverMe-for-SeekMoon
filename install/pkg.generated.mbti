@@ -6,11 +6,11 @@ import {
 }
 
 // Values
-pub const ServerName : String = "everme-memory"
+pub const ServerName : String = "everme-seekmoon"
 
 pub const SkillConfigFileName : String = "mcp.json"
 
-pub const SkillDirName : String = "everme-memory"
+pub const SkillDirName : String = "everme-seekmoon"
 
 pub const SkillFileName : String = "SKILL.md"
 

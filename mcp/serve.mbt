@@ -28,7 +28,7 @@ fn debugging() -> Bool {
 /// Log to stderr, never to stdout.
 async fn log(text : String) -> Unit {
   if debugging() {
-    @stdio.stderr.text.write("[everme-mcp] \{text}\n") catch {
+    @stdio.stderr.text.write("[everme-seekmoon-mcp] \{text}\n") catch {
       _ => ()
     }
   }

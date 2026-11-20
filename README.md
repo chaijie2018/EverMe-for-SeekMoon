@@ -1,12 +1,12 @@
 # EverMe-for-SeekMoon
 
-`everme` — a MoonBit CLI that connects [SeekMoon](https://github.com/moonbitlang/openseek) to
+`everme-seekmoon` — a MoonBit CLI that connects [SeekMoon](https://github.com/moonbitlang/openseek) to
 [EverMe](https://github.com/EverMind-AI/EverMe) memory: one pool shared across the
 user's devices and agents.
 
 It is two things in one binary:
 
-- **an MCP server** (`everme mcp serve`) speaking the EverMe memory contract over
+- **an MCP server** (`everme-seekmoon mcp serve`) speaking the EverMe memory contract over
   stdio — tools `mem_context`, `mem_search`, `mem_save_fact`, `mem_save_turn` and
   resources `mem://profile`, `mem://search?q=…` — which SeekMoon launches;
 - **a CLI** that logs in, registers this machine's agent, installs the skill bundle
@@ -14,26 +14,25 @@ It is two things in one binary:
 
 It is not a reimplementation of upstream `evercli`: only the parts SeekMoon needs,
 written in MoonBit so the server has no Node dependency. The two can coexist — they
-share an account and its memory, and `everme auth adopt-evercli` reuses an existing
+share an account and its memory, and `everme-seekmoon auth adopt-evercli` reuses an existing
 evercli login.
 
 ## Install
 
 ```bash
-# 1. build, then keep a copy outside the build tree
-moon build --release
-_build/native/release/build/cmd/everme/everme install --copy-to ~/.local/bin
+# 1. build and install, keeping the binary outside the build tree
+moon run cmd/everme-seekmoon -- install --copy-to ~/.local/bin
 
 # 2. (optional) bring earlier conversations in
-~/.local/bin/everme import sessions
+~/.local/bin/everme-seekmoon import sessions
 
 # 3. check
-~/.local/bin/everme doctor
-~/.local/bin/everme mcp test
+~/.local/bin/everme-seekmoon doctor
+~/.local/bin/everme-seekmoon mcp test
 ```
 
 `install` registers this machine's agent if the credential has none, writes the
-skill bundle to `~/.openseek/skills/everme-memory/`, and prints the label it
+skill bundle to `~/.openseek/skills/everme-seekmoon/`, and prints the label it
 registered under. `--mode mcp-json` merges `~/.openseek/mcp.json` instead (or as
 well, with `both`), keeping a `<path>.bak` of the previous file. `--agents-md` adds
 a marked block to the workspace's `AGENTS.md`.
@@ -59,10 +58,10 @@ with the same `error.type` taxonomy and exit codes as upstream.
 
 | Path | Contents |
 |---|---|
-| `~/.local/share/everme/credentials.json` | `0600`: the `emk_` account key and this CLI's own `evt_` agent token |
-| `~/.config/everme/account.json` | Cached account snapshot (no secrets) |
-| `~/.local/share/everme/import-state.json` | Per-session import cursor |
-| `~/.openseek/skills/everme-memory/` | `SKILL.md` + `mcp.json` for SeekMoon (from `install`) |
+| `~/.local/share/everme-seekmoon/credentials.json` | `0600`: the `emk_` account key and this CLI's own `evt_` agent token |
+| `~/.config/everme-seekmoon/account.json` | Cached account snapshot (no secrets) |
+| `~/.local/share/everme-seekmoon/import-state.json` | Per-session import cursor |
+| `~/.openseek/skills/everme-seekmoon/` | `SKILL.md` + `mcp.json` for SeekMoon (from `install`) |
 
 Tokens never reach `mcp.json`, logs, or error messages: the server reads its own
 credential store, and every outward string is redacted (`emk_…` / `evt_…` keep

@@ -1,4 +1,4 @@
-// `everme doctor` — the honest self-check. Two of its checks are local
+// `everme-seekmoon doctor` — the honest self-check. Two of its checks are local
 // (credential present, account reachable); `--probe-platform` adds the two
 // that answer the question this CLI cannot answer from source code: does this
 // EverMe backend accept the platform label we want to register under?
@@ -161,7 +161,7 @@ fn effective_prefix(creds : @creds.Credentials) -> String {
 }
 
 ///|
-/// `everme doctor [--probe-platform] [--no-register]`.
+/// `everme-seekmoon doctor [--probe-platform] [--no-register]`.
 async fn doctor_command(m : @argparse.Matches) -> Int32 {
   let paths = @config.Paths::resolve()
   let settings = @config.Settings::resolve()
@@ -188,7 +188,7 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
   } else {
     checks.push(
       Check::skipped(
-        "credential", "no API key stored (run `everme auth login` or `everme auth adopt-evercli`)",
+        "credential", "no API key stored (run `everme-seekmoon auth login` or `everme-seekmoon auth adopt-evercli`)",
       ),
     )
   }
@@ -278,7 +278,7 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
               {
                 kind: "auth",
                 message,
-                hint: "run `everme doctor --probe-platform --platform <label>` to register this CLI's own agent",
+                hint: "run `everme-seekmoon doctor --probe-platform --platform <label>` to register this CLI's own agent",
                 http_status: listed.http_status,
                 code: listed.envelope.status,
                 request_id: listed.envelope.request_id,
@@ -387,7 +387,7 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
   let failed = checks.any(check => check.failed_())
   let total = checks.length()
   let text = StringBuilder()
-  text.write_string("everme doctor\n")
+  text.write_string("everme-seekmoon doctor\n")
   text.write_string("  api      \{base}\n")
   // Two different labels belong in one report and must never be confused: the
   // one we asked for (`--platform`) and the one our stored agent actually has.

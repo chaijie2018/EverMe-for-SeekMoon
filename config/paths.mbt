@@ -46,9 +46,9 @@ pub fn home() -> String raise {
 pub fn Paths::resolve() -> Paths raise {
   let home = home()
   {
-    config_dir: bucket("XDG_CONFIG_HOME", home + "/.config", "everme"),
-    data_dir: bucket("XDG_DATA_HOME", home + "/.local/share", "everme"),
-    cache_dir: bucket("XDG_CACHE_HOME", home + "/.cache", "everme"),
+    config_dir: bucket("XDG_CONFIG_HOME", home + "/.config", "everme-seekmoon"),
+    data_dir: bucket("XDG_DATA_HOME", home + "/.local/share", "everme-seekmoon"),
+    cache_dir: bucket("XDG_CACHE_HOME", home + "/.cache", "everme-seekmoon"),
   }
 }
 

@@ -2,7 +2,7 @@
 // what counts as success, what counts as "already registered", and the hint a
 // rejected label leaves the user with.
 //
-// Whitebox on purpose: these are helpers of the `everme` binary's own package,
+// Whitebox on purpose: these are helpers of the `everme-seekmoon` binary's own package,
 // and a main package should not grow a blackbox test surface.
 
 ///|

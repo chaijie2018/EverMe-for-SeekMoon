@@ -1,10 +1,10 @@
-// `everme auth …`: get, inspect, adopt, or drop the credential this machine
+// `everme-seekmoon auth …`: get, inspect, adopt, or drop the credential this machine
 // uses. The device flow is the default (an `emk_` can be pasted too), and
 // `--no-wait`/`--device-code` split it across processes for agents that cannot
 // sit in a terminal waiting for a human to click approve.
 
 ///|
-/// Dispatch `everme auth <subcommand>`.
+/// Dispatch `everme-seekmoon auth <subcommand>`.
 async fn auth_command(m : @argparse.Matches) -> Int32 {
   guard m.subcommand is Some((name, selected)) else {
     usage(
@@ -31,7 +31,7 @@ const DefaultPollSeconds : Int32 = 5
 const MaxPolls : Int32 = 120
 
 ///|
-/// `everme auth login` — store an API key, resume a device flow, start one and
+/// `everme-seekmoon auth login` — store an API key, resume a device flow, start one and
 /// exit, or run the whole flow in this process.
 async fn auth_login(m : @argparse.Matches) -> Int32 {
   let paths = @config.Paths::resolve()
@@ -51,7 +51,7 @@ async fn auth_login(m : @argparse.Matches) -> Int32 {
   let fingerprint = @creds.machine_id(paths.machine_file())
   let start = client.device_start(
     platform~,
-    client_name="everme",
+    client_name="everme-seekmoon",
     client_version=@config.Version,
     fingerprint~,
   )
@@ -82,10 +82,10 @@ async fn auth_login(m : @argparse.Matches) -> Int32 {
       "deviceCode": Json(start.device_code),
       "expiresInSec": Json(start.expires_in),
       "resumeCommand": Json(
-        "everme auth login --device-code \{start.device_code}",
+        "everme-seekmoon auth login --device-code \{start.device_code}",
       ),
     }
-    let text = "open \{start.verification_url} and enter \{start.user_code} (expires in \{start.expires_in}s); then run `everme auth login --device-code \{start.device_code}`"
+    let text = "open \{start.verification_url} and enter \{start.user_code} (expires in \{start.expires_in}s); then run `everme-seekmoon auth login --device-code \{start.device_code}`"
     emit(machine, text, data)
     return 0
   }
@@ -164,7 +164,7 @@ async fn poll_loop(
     }
     if polled.status == "expired" {
       not_logged_in(
-        "the device code expired before it was approved", "run `everme auth login` again to get a fresh code",
+        "the device code expired before it was approved", "run `everme-seekmoon auth login` again to get a fresh code",
       )
     }
     polls = polls + 1
@@ -174,7 +174,7 @@ async fn poll_loop(
   }
   guard approved is Some(token) else {
     not_logged_in(
-      "the device flow was not approved in time", "run `everme auth login` again",
+      "the device flow was not approved in time", "run `everme-seekmoon auth login` again",
     )
   }
   write_stderr("approved.\n")
@@ -213,7 +213,7 @@ async fn finish_login(
   }
   if !creds.has_api_key() {
     not_logged_in(
-      "the backend approved the flow but returned no API key", "run `everme auth login` again",
+      "the backend approved the flow but returned no API key", "run `everme-seekmoon auth login` again",
     )
   }
   creds.save(paths.credentials_file())
@@ -249,7 +249,7 @@ fn base_of_empty(settings : @config.Settings) -> String raise {
 }
 
 ///|
-/// `everme auth status` — what is stored, masked, plus the cached account.
+/// `everme-seekmoon auth status` — what is stored, masked, plus the cached account.
 async fn auth_status(m : @argparse.Matches) -> Int32 {
   let paths = @config.Paths::resolve()
   let machine = machine_of(m)
@@ -287,14 +287,14 @@ async fn auth_status(m : @argparse.Matches) -> Int32 {
   let text = if creds.has_api_key() {
     "logged in: \{who}\n  api-key     \{@redact.mask(creds.api_key)}\n  agent-token \{@redact.mask(creds.agent_token)}\n  agent-id    \{if creds.agent_id.is_empty() { "none" } else { creds.agent_id }}\n  platform    \{if creds.platform.is_empty() { "none" } else { creds.platform }}\n  stored at   \{paths.credentials_file()}"
   } else {
-    "not logged in (run `everme auth login`, or `everme auth adopt-evercli` to reuse an evercli login)"
+    "not logged in (run `everme-seekmoon auth login`, or `everme-seekmoon auth adopt-evercli` to reuse an evercli login)"
   }
   emit(machine, text, data)
   0
 }
 
 ///|
-/// `everme auth adopt-evercli` — take the credential the upstream CLI already
+/// `everme-seekmoon auth adopt-evercli` — take the credential the upstream CLI already
 /// stored on this machine, then verify it and cache the account.
 async fn auth_adopt(m : @argparse.Matches) -> Int32 {
   let paths = @config.Paths::resolve()
@@ -306,7 +306,7 @@ async fn auth_adopt(m : @argparse.Matches) -> Int32 {
   guard adopted is Some(adopted) else {
     not_logged_in(
       "no evercli login found at \{home}/.local/share/evercli/credentials.json",
-      "run `evercli auth login` first, or `everme auth login`",
+      "run `evercli auth login` first, or `everme-seekmoon auth login`",
     )
   }
   let creds = @creds.Credentials::load(paths.credentials_file())
@@ -320,7 +320,7 @@ async fn auth_adopt(m : @argparse.Matches) -> Int32 {
 }
 
 ///|
-/// `everme auth logout` — remove the stored credential and the account cache.
+/// `everme-seekmoon auth logout` — remove the stored credential and the account cache.
 async fn auth_logout(m : @argparse.Matches) -> Int32 {
   let paths = @config.Paths::resolve()
   let machine = machine_of(m)
@@ -336,7 +336,7 @@ async fn auth_logout(m : @argparse.Matches) -> Int32 {
 }
 
 ///|
-/// `everme auth disconnect-agent --agent-id <id>` — retire an agent on this
+/// `everme-seekmoon auth disconnect-agent --agent-id <id>` — retire an agent on this
 /// account, e.g. one this CLI registered under a label it no longer wants. When
 /// it is our own agent, the stored token goes with it: a token for a
 /// disconnected agent is exactly the stale identity this CLI refuses to keep.
@@ -348,13 +348,13 @@ async fn auth_disconnect(m : @argparse.Matches) -> Int32 {
   let creds = @creds.Credentials::load(paths.credentials_file())
   if !creds.has_api_key() {
     not_logged_in(
-      "no API key stored, so this agent cannot be disconnected", "run `everme auth login` first",
+      "no API key stored, so this agent cannot be disconnected", "run `everme-seekmoon auth login` first",
     )
   }
   let agent_id = value_of(m, "agent-id")
   if agent_id.is_empty() {
     usage(
-      "pass --agent-id <id>; `everme doctor` prints this CLI's own agent id",
+      "pass --agent-id <id>; `everme-seekmoon doctor` prints this CLI's own agent id",
     )
   }
   let client = @api.Client::new(base~).with_token(creds.api_key)
@@ -370,7 +370,7 @@ async fn auth_disconnect(m : @argparse.Matches) -> Int32 {
     }
   }
   let text = if mine {
-    "disconnected agent \{agent_id} and forgot its token; run `everme doctor --probe-platform` to register a fresh one"
+    "disconnected agent \{agent_id} and forgot its token; run `everme-seekmoon doctor --probe-platform` to register a fresh one"
   } else {
     "disconnected agent \{agent_id}; this CLI's own credential is unchanged"
   }

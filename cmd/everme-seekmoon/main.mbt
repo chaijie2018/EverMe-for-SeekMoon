@@ -1,4 +1,4 @@
-// `everme` — the EverMe CLI for SeekMoon. argparse owns the command tree; each
+// `everme-seekmoon` — the EverMe CLI for SeekMoon. argparse owns the command tree; each
 // command returns the process status and raises `@api.ApiError` for anything a
 // user can act on, which `dispatch` renders as text or as the error envelope.
 
@@ -101,11 +101,11 @@ fn global_options() -> Array[@argparse.OptionArg] {
 }
 
 ///|
-/// The command tree. `subcommand_required` keeps a bare `everme` an error:
+/// The command tree. `subcommand_required` keeps a bare `everme-seekmoon` an error:
 /// automation should say what it wants.
 fn root_command() -> @argparse.Command {
   Command(
-    "everme",
+    "everme-seekmoon",
     about="EverMe personal memory for SeekMoon.",
     subcommand_required=true,
     disable_help_subcommand=true,
@@ -160,7 +160,7 @@ fn root_command() -> @argparse.Command {
                 "agent-id",
                 long="agent-id",
                 default_values=[""],
-                about="Agent id to disconnect; `everme doctor` prints this CLI's own agent id.",
+                about="Agent id to disconnect; `everme-seekmoon doctor` prints this CLI's own agent id.",
               ),
             ],
           ),
@@ -188,7 +188,7 @@ fn root_command() -> @argparse.Command {
           @argparse.FlagArg(
             "agents-md",
             long="agents-md",
-            about="Also remove the everme block from the workspace's AGENTS.md.",
+            about="Also remove the everme-seekmoon block from the workspace's AGENTS.md.",
           ),
           @argparse.FlagArg(
             "dry-run",
@@ -279,7 +279,7 @@ fn root_command() -> @argparse.Command {
 }
 
 ///|
-/// Run `everme`.
+/// Run `everme-seekmoon`.
 async fn main {
   let status = dispatch() catch {
     @api.ApiError(failure) => {
@@ -337,18 +337,20 @@ async fn run_command(name : String, m : @argparse.Matches) -> Int32 {
 }
 
 ///|
-/// `everme version`.
+/// `everme-seekmoon version`.
 fn command_version(m : @argparse.Matches) -> Int32 raise {
   let machine = machine_of(m)
   let settings = @config.Settings::resolve()
   if machine {
     emit(true, "", {
-      "name": "everme",
+      "name": "everme-seekmoon",
       "version": Json(@config.Version),
       "platform": Json(settings.platform),
     })
   } else {
-    println("everme \{@config.Version} (EverMe personal memory for SeekMoon)")
+    println(
+      "everme-seekmoon \{@config.Version} (EverMe personal memory for SeekMoon)",
+    )
   }
   0
 }

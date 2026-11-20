@@ -1,4 +1,4 @@
-// `everme mcp …` — the stdio server SeekMoon launches, plus a self-check that
+// `everme-seekmoon mcp …` — the stdio server SeekMoon launches, plus a self-check that
 // proves the protocol answers and one real backend call without a host.
 
 ///|
@@ -12,14 +12,14 @@ async fn memory_client(selected : @argparse.Matches) -> @api.Client {
   let creds = @creds.Credentials::load(paths.credentials_file())
   if !creds.has_agent_token() {
     not_logged_in(
-      "no agent token stored: the memory endpoints need this CLI's own evt_", "run `everme doctor --probe-platform` to register one, then retry",
+      "no agent token stored: the memory endpoints need this CLI's own evt_", "run `everme-seekmoon doctor --probe-platform` to register one, then retry",
     )
   }
   @api.Client::new(base~).with_token(creds.agent_token)
 }
 
 ///|
-/// `everme mcp <subcommand>`.
+/// `everme-seekmoon mcp <subcommand>`.
 async fn mcp_command(m : @argparse.Matches) -> Int32 {
   guard m.subcommand is Some((name, selected)) else {
     usage("`mcp` needs a subcommand: serve or test")
@@ -32,7 +32,7 @@ async fn mcp_command(m : @argparse.Matches) -> Int32 {
 }
 
 ///|
-/// `everme mcp serve` — speak MCP on stdin/stdout until the host closes the pipe.
+/// `everme-seekmoon mcp serve` — speak MCP on stdin/stdout until the host closes the pipe.
 async fn mcp_serve(selected : @argparse.Matches) -> Int32 {
   let client = memory_client(selected)
   @mcp.serve(client)
@@ -40,7 +40,7 @@ async fn mcp_serve(selected : @argparse.Matches) -> Int32 {
 }
 
 ///|
-/// `everme mcp test` — the protocol answers a host would get, then one real
+/// `everme-seekmoon mcp test` — the protocol answers a host would get, then one real
 /// `mem_context`, so a bad token or a wrong API base fails here instead of inside
 /// a session.
 async fn mcp_test(selected : @argparse.Matches) -> Int32 {
@@ -75,7 +75,7 @@ async fn mcp_test(selected : @argparse.Matches) -> Int32 {
   let preview = @mcp.content_text(recalled)
   let names = @mcp.tool_names()
   let text = StringBuilder()
-  text.write_string("everme mcp test\n")
+  text.write_string("everme-seekmoon mcp test\n")
   text.write_string(
     "  initialize    → \{@mcp.describe_decision(initialize)}\n",
   )

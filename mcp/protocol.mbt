@@ -116,7 +116,10 @@ fn initialize_result(params : Json) -> Json {
       "tools": Json::empty_object(),
       "resources": Json::empty_object(),
     },
-    "serverInfo": { "name": "everme-memory", "version": Json(@config.Version) },
+    "serverInfo": {
+      "name": "everme-seekmoon",
+      "version": Json(@config.Version),
+    },
     "instructions": Json(instructions()),
   }
 }

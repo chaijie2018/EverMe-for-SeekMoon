@@ -1,4 +1,4 @@
-// What `everme install` writes, as pure functions: the skill document, the
+// What `everme-seekmoon install` writes, as pure functions: the skill document, the
 // `mcpServers` entry, the merge into an existing config, and the marked block for
 // a workspace's AGENTS.md.
 //
@@ -9,11 +9,11 @@
 ///|
 /// The MCP server name. Stable on purpose: a skill, this CLI, and any docs must
 /// agree on it, and a rename would silently disconnect every installed host.
-pub const ServerName : String = "everme-memory"
+pub const ServerName : String = "everme-seekmoon"
 
 ///|
 /// The skill directory (and the skill's own name).
-pub const SkillDirName : String = "everme-memory"
+pub const SkillDirName : String = "everme-seekmoon"
 
 ///|
 /// The file a host reads inside the skill directory.
@@ -26,11 +26,11 @@ pub const SkillConfigFileName : String = "mcp.json"
 
 ///|
 /// The start of the managed block in `AGENTS.md`.
-const AgentsBegin : String = "<!-- everme:begin — managed by `everme install`; edit outside these markers -->"
+const AgentsBegin : String = "<!-- everme-seekmoon:begin — managed by `everme-seekmoon install`; edit outside these markers -->"
 
 ///|
 /// The end of the managed block in `AGENTS.md`.
-const AgentsEnd : String = "<!-- everme:end -->"
+const AgentsEnd : String = "<!-- everme-seekmoon:end -->"
 
 ///|
 /// The path of the binary to launch from `mcp.json`: an explicit `--command`, the

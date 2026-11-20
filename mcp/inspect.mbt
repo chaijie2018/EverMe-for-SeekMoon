@@ -1,4 +1,4 @@
-// Helpers for `everme mcp test`: the pieces a self-check needs to report what the
+// Helpers for `everme-seekmoon mcp test`: the pieces a self-check needs to report what the
 // server would answer, without the CLI having to reach into the decision enum.
 
 ///|

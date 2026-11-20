@@ -1,4 +1,4 @@
-// `everme install` / `everme uninstall` — wire this CLI into SeekMoon.
+// `everme-seekmoon install` / `everme-seekmoon uninstall` — wire this CLI into SeekMoon.
 //
 // Three things make it "installed": the account and an agent of our own (so the
 // memory endpoints answer), a skill bundle (so the model knows when and how to
@@ -57,7 +57,7 @@ async fn ensure_agent(
   let creds = @creds.Credentials::load(paths.credentials_file())
   if !creds.has_api_key() {
     not_logged_in(
-      "no API key stored, so no agent can be registered", "run `everme auth login`, or `everme auth adopt-evercli` to reuse an evercli login",
+      "no API key stored, so no agent can be registered", "run `everme-seekmoon auth login`, or `everme-seekmoon auth adopt-evercli` to reuse an evercli login",
     )
   }
   if creds.has_agent_token() {
@@ -78,7 +78,7 @@ async fn ensure_agent(
 }
 
 ///|
-/// `everme install`.
+/// `everme-seekmoon install`.
 async fn install_command(selected : @argparse.Matches) -> Int32 {
   let machine = machine_of(selected)
   let settings = @config.Settings::resolve()
@@ -104,7 +104,7 @@ async fn install_command(selected : @argparse.Matches) -> Int32 {
   let mut copied = ""
   if !copy_to.is_empty() {
     if dry_run {
-      copied = copy_to + "/everme"
+      copied = copy_to + "/everme-seekmoon"
       command = copied
     } else {
       copied = @install.copy_binary(command, copy_to)
@@ -120,7 +120,7 @@ async fn install_command(selected : @argparse.Matches) -> Int32 {
     dry_run,
   })
   let text = StringBuilder()
-  text.write_string("everme install\n")
+  text.write_string("everme-seekmoon install\n")
   text.write_string("  command  \{command}\n")
   if !copied.is_empty() {
     text.write_string(
@@ -194,7 +194,7 @@ async fn install_command(selected : @argparse.Matches) -> Int32 {
 }
 
 ///|
-/// `everme uninstall`.
+/// `everme-seekmoon uninstall`.
 async fn uninstall_command(selected : @argparse.Matches) -> Int32 {
   let machine = machine_of(selected)
   let dry_run = flag_of(selected, "dry-run")
@@ -220,7 +220,7 @@ async fn uninstall_command(selected : @argparse.Matches) -> Int32 {
     dry_run,
   })
   let text = StringBuilder()
-  text.write_string("everme uninstall\n")
+  text.write_string("everme-seekmoon uninstall\n")
   if @install.wants_skill(mode) {
     text.write_string(
       "  skill    \{report.skill_dir}  (\{if report.skill_removed { "deleted" } else { "not installed" }}" +

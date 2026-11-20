@@ -76,7 +76,7 @@ fn[T] usage(message : String) -> T raise {
   raise @api.ApiError({
     kind: "invalid_args",
     message,
-    hint: "run `everme --help` for usage",
+    hint: "run `everme-seekmoon --help` for usage",
     http_status: 0,
     code: 0,
     request_id: "",

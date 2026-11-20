@@ -238,8 +238,8 @@ pub fn classify(http_status : Int32) -> String {
 pub fn hint_for(kind : String) -> String {
   match kind {
     "auth" =>
-      "run `everme auth login` (or `everme auth adopt-evercli`) to refresh the credential"
-    "not_logged_in" => "run `everme auth login` first"
+      "run `everme-seekmoon auth login` (or `everme-seekmoon auth adopt-evercli`) to refresh the credential"
+    "not_logged_in" => "run `everme-seekmoon auth login` first"
     "rate_limit" => "wait a moment and retry"
     "network" => "check connectivity and EVERME_API_BASE"
     "invalid_args" => "the backend rejected a field; see the message above"

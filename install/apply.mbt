@@ -149,7 +149,7 @@ pub async fn copy_binary(source : String, directory : String) -> String {
         request_id: "",
       })
   }
-  let target = directory + "/everme"
+  let target = directory + "/everme-seekmoon"
   @fs.write_binary(target, bytes, permission=ModeExecutable) catch {
     error =>
       raise @api.ApiError({
@@ -337,7 +337,7 @@ pub async fn uninstall(options : InstallOptions) -> UninstallReport {
           Some(remaining) =>
             if options.dry_run {
               notes.push(
-                "would remove the everme block from \{options.agents_md}",
+                "would remove the everme-seekmoon block from \{options.agents_md}",
               )
             } else if remaining.is_empty() {
               // The file held nothing but our block: it was ours to remove.
@@ -350,7 +350,7 @@ pub async fn uninstall(options : InstallOptions) -> UninstallReport {
               write_text(options.agents_md, remaining + "\n")
               block_removed = true
             }
-          None => notes.push("no everme block in \{options.agents_md}")
+          None => notes.push("no everme-seekmoon block in \{options.agents_md}")
         }
       }
       None => notes.push("\{options.agents_md} does not exist")

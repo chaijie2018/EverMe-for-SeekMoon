@@ -26,31 +26,33 @@ fn servers(text : String) -> Map[String, Json] raise {
 ///|
 test "an explicit --command wins" {
   assert_eq(
-    @install.resolve_command("/opt/everme", "/usr/local/bin/everme", "/tmp"),
-    "/opt/everme",
+    @install.resolve_command(
+      "/opt/everme-seekmoon", "/usr/local/bin/everme-seekmoon", "/tmp",
+    ),
+    "/opt/everme-seekmoon",
   )
 }
 
 ///|
 test "an absolute argv[0] is used as-is" {
   assert_eq(
-    @install.resolve_command("", "/usr/local/bin/everme", "/tmp"),
-    "/usr/local/bin/everme",
+    @install.resolve_command("", "/usr/local/bin/everme-seekmoon", "/tmp"),
+    "/usr/local/bin/everme-seekmoon",
   )
 }
 
 ///|
 test "a relative argv[0] is resolved against the working directory" {
   assert_eq(
-    @install.resolve_command("", "_build/native/everme.exe", "/work"),
-    "/work/_build/native/everme.exe",
+    @install.resolve_command("", "_build/native/everme-seekmoon.exe", "/work"),
+    "/work/_build/native/everme-seekmoon.exe",
   )
 }
 
 ///|
 test "a bare program name is refused, because PATH may differ later" {
   let outcome = try {
-    ignore(@install.resolve_command("", "everme", "/tmp"))
+    ignore(@install.resolve_command("", "everme-seekmoon", "/tmp"))
     "accepted"
   } catch {
     @api.ApiError(failure) => failure.kind
@@ -61,18 +63,18 @@ test "a bare program name is refused, because PATH may differ later" {
 
 ///|
 test "the server entry launches mcp serve" {
-  let entry = @install.server_entry("/opt/everme")
-  assert_eq(@api.string_field(entry, "command"), "/opt/everme")
+  let entry = @install.server_entry("/opt/everme-seekmoon")
+  assert_eq(@api.string_field(entry, "command"), "/opt/everme-seekmoon")
   assert_eq(@api.strings_field(entry, "args"), ["mcp", "serve"])
 }
 
 ///|
 test "the skill config names one server and no secrets" {
-  let text = @install.skill_config("/opt/everme")
+  let text = @install.skill_config("/opt/everme-seekmoon")
   let table = servers(text)
   assert_eq(table.length(), 1)
   let entry = table[@install.ServerName]
-  assert_eq(@api.string_field(entry, "command"), "/opt/everme")
+  assert_eq(@api.string_field(entry, "command"), "/opt/everme-seekmoon")
   assert_false(text.contains("evt_"))
   assert_false(text.contains("emk_"))
 }
@@ -116,7 +118,7 @@ test "merging keeps every other key and server" {
     #|    "other": { "command": "other-bin", "args": ["x"] }
     #|  }
     #|}
-  let merged = @install.merge_server(Some(existing), "/opt/everme")
+  let merged = @install.merge_server(Some(existing), "/opt/everme-seekmoon")
   let document = parse(merged)
   assert_eq(@api.string_field(Json::object(document), "theme"), "dark")
   let table = servers(merged)
@@ -124,14 +126,14 @@ test "merging keeps every other key and server" {
   assert_eq(@api.string_field(table["other"], "command"), "other-bin")
   assert_eq(
     @api.string_field(table[@install.ServerName], "command"),
-    "/opt/everme",
+    "/opt/everme-seekmoon",
   )
 }
 
 ///|
 test "merging replaces our own stale entry" {
   let existing =
-    #|{"mcpServers":{"everme-memory":{"command":"/old/path","args":["mcp","serve"]}}}
+    #|{"mcpServers":{"everme-seekmoon":{"command":"/old/path","args":["mcp","serve"]}}}
   let merged = @install.merge_server(Some(existing), "/new/path")
   let table = servers(merged)
   assert_eq(table.length(), 1)
@@ -143,21 +145,21 @@ test "merging replaces our own stale entry" {
 
 ///|
 test "merging twice changes nothing the second time" {
-  let once = @install.merge_server(None, "/opt/everme")
-  let twice = @install.merge_server(Some(once), "/opt/everme")
+  let once = @install.merge_server(None, "/opt/everme-seekmoon")
+  let twice = @install.merge_server(Some(once), "/opt/everme-seekmoon")
   assert_eq(once, twice)
 }
 
 ///|
 test "merging into nothing creates the document" {
-  let merged = @install.merge_server(None, "/opt/everme")
+  let merged = @install.merge_server(None, "/opt/everme-seekmoon")
   assert_eq(servers(merged).length(), 1)
 }
 
 ///|
 test "a config that is not JSON is refused rather than overwritten" {
   let outcome = try {
-    ignore(@install.merge_server(Some("not json"), "/opt/everme"))
+    ignore(@install.merge_server(Some("not json"), "/opt/everme-seekmoon"))
     "accepted"
   } catch {
     @api.ApiError(failure) => failure.kind
@@ -169,7 +171,12 @@ test "a config that is not JSON is refused rather than overwritten" {
 ///|
 test "a config whose mcpServers is not an object is refused" {
   let outcome = try {
-    ignore(@install.merge_server(Some("{\"mcpServers\": []}"), "/opt/everme"))
+    ignore(
+      @install.merge_server(
+        Some("{\"mcpServers\": []}"),
+        "/opt/everme-seekmoon",
+      ),
+    )
     "accepted"
   } catch {
     @api.ApiError(failure) => failure.kind
@@ -181,7 +188,7 @@ test "a config whose mcpServers is not an object is refused" {
 ///|
 test "removing takes only our entry" {
   let existing =
-    #|{"mcpServers":{"everme-memory":{"command":"/opt/everme"},"other":{"command":"x"}}}
+    #|{"mcpServers":{"everme-seekmoon":{"command":"/opt/everme-seekmoon"},"other":{"command":"x"}}}
   let remaining = @install.remove_server(existing)
   guard remaining is Some(remaining) else { fail("expected a change") }
   let table = servers(remaining)
@@ -209,7 +216,7 @@ test "the agents block is appended to existing text, which is kept" {
 ///|
 test "the agents block goes into an empty file on its own" {
   let updated = @install.upsert_agents_block("", @install.agents_block())
-  assert_true(updated.has_prefix("<!-- everme:begin"))
+  assert_true(updated.has_prefix("<!-- everme-seekmoon:begin"))
   assert_true(@install.has_agents_block(updated))
 }
 
@@ -254,12 +261,12 @@ test "the rendered config parses back to the same document" {
 
 ///|
 async test "copying the binary writes an executable copy outside _build" {
-  let dir = @fs.tmpdir(prefix="everme-copy-")
+  let dir = @fs.tmpdir(prefix="everme-seekmoon-copy-")
   defer @async.protect_from_cancel(() => purge(dir))
   let source = dir + "/source.bin"
   @fs.write_text(source, "#!/bin/sh\necho hi\n")
   let target = @install.copy_binary(source, dir + "/bin")
-  assert_eq(target, dir + "/bin/everme")
+  assert_eq(target, dir + "/bin/everme-seekmoon")
   assert_true(@fs.exists(target) catch { _ => false })
   assert_eq(@fs.read_text(target) catch { _ => "" }, "#!/bin/sh\necho hi\n")
   assert_true(@fs.can_execute(target) catch { _ => false })
