@@ -157,6 +157,9 @@ pub fn skill_markdown() -> String {
     $|Save at milestones, not only at the end. A long task can be interrupted at the
     $|context ceiling, and whatever was never saved is then only in the compressed
     $|summary. Saving the trajectory so far keeps the finished part out of its hands.
+    $|Write the milestone note so it can stand alone: what is done, what is next,
+    $|and the constraints that must not be broken. A summary often keeps the first
+    $|and loses the other two, which is where resuming actually costs time.
     $|
     $|## After a context checkpoint
     $|
@@ -174,6 +177,12 @@ pub fn skill_markdown() -> String {
     $|  outranks any recollection, yours or the summary's.
     $|- Resume by stating where the work actually stands and what is next, then do only
     $|  the missing part. Never redo a finished step because the summary forgot it.
+    $|- A continuation turn is not a question. Nothing has been asked of the user and
+    $|  nothing is waiting for them: report in one line where things stand, then take
+    $|  the next step. Do not ask whether to continue, and do not stop to confirm.
+    $|- Keep the working set small. Store a digest of long output and cite it instead
+    $|  of pasting it back; every token kept out of the context is one the next
+    $|  checkpoint does not have to compress away.
     $|
     $|## Profile at the start of a session
     $|
