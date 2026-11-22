@@ -1,5 +1,6 @@
 // Filesystem half of `tools/gen-skill`: locate the module checkout, read
-// `docs/SKILL.template.md`, and refresh `docs/SKILL.md`.
+// `docs/SKILL.template.md`, refresh `docs/SKILL.md`, and write a publishable
+// skill directory (`SKILL.md`, `mcp.json`, `README.md`).
 
 ///|
 /// The rendered document, relative to the module root.
@@ -8,6 +9,14 @@ const RenderedDoc : String = "docs/SKILL.md"
 ///|
 /// The template, relative to the module root.
 const TemplateSource : String = "docs/SKILL.template.md"
+
+///|
+struct WriteReport {
+  dir : String
+  files : Array[String]
+  written : Bool
+  notes : Array[String]
+}
 
 ///|
 fn parent_of(dir : String) -> String? {
@@ -106,4 +115,37 @@ async fn render_from_checkout(root : String) -> String {
       })
   }
   render_skill(template)
+}
+
+///|
+/// Write the directory a marketplace publish ships: the skill, a config that
+/// addresses the server by `moonx` coordinate, and a README.
+async fn write_skill_dir(
+  dir : String,
+  skill : String,
+  dry_run : Bool,
+) -> WriteReport {
+  let notes : Array[String] = []
+  let problems = publish_problems(skill)
+  if !problems.is_empty() {
+    raise @api.ApiError({
+      kind: "invalid_skill",
+      message: "this skill cannot be published: \{problems.join("; ")}",
+      hint: "fix \{TemplateSource}",
+      http_status: 0,
+      code: 0,
+      request_id: "",
+    })
+  }
+  let files = [SkillFileName, SkillConfigFileName, "README.md"]
+  if dry_run {
+    for name in files {
+      notes.push("would write \{dir}/\{name}")
+    }
+    return { dir, files, written: false, notes }
+  }
+  write_text(dir + "/" + SkillFileName, skill)
+  write_text(dir + "/" + SkillConfigFileName, skill_config())
+  write_text(dir + "/README.md", skill_readme())
+  { dir, files, written: true, notes }
 }

@@ -6,6 +6,7 @@ package "chaijie2018/EverMe-for-SeekMoon/tools/gen-skill"
 // Errors
 
 // Types and methods
+type WriteReport
 
 // Type aliases
 
