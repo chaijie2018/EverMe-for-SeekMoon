@@ -230,7 +230,9 @@ async fn finish_login(
   // A refused registration does not undo the login — the credential is stored
   // and `auth register --platform <label>` can try another label later.
   let mut mine = creds.agent_id
-  let mut registered = false
+  // An agent that arrived with the flow was minted by this login, so it is news
+  // even though nothing was registered locally afterwards.
+  let mut registered = !agent_token.is_empty()
   let mut agent_error = ""
   if !creds.has_agent_token() {
     let outcome : Result[(String, Bool), @api.Failure] = Ok(
