@@ -50,3 +50,45 @@ test "the rejected-label hint names the label that is known to work" {
   assert_true(hint.contains("evercli"))
   assert_true(hint.contains("--platform"))
 }
+
+///|
+fn stored_creds(
+  api_key : String,
+  agent_token : String,
+  agent_id : String,
+) -> @creds.Credentials {
+  {
+    api_key,
+    agent_token,
+    agent_id,
+    platform: if agent_token.is_empty() { "" } else { "evercli" },
+    token_prefix: "",
+  }
+}
+
+///|
+test "a login to another account drops the agent this CLI had" {
+  let creds = stored_creds("emk_old", "evt_old", "agt_old")
+  apply_login(creds, "emk_new", "", "")
+  assert_eq(creds.api_key, "emk_new")
+  assert_false(creds.has_agent_token())
+  assert_eq(creds.agent_id, "")
+  assert_eq(creds.platform, "")
+}
+
+///|
+test "a login to the same account keeps the agent it already had" {
+  let creds = stored_creds("emk_same", "evt_same", "agt_same")
+  apply_login(creds, "emk_same", "", "")
+  assert_true(creds.has_agent_token())
+  assert_eq(creds.agent_id, "agt_same")
+  assert_eq(creds.platform, "evercli")
+}
+
+///|
+test "an agent that comes with the login replaces the stored one" {
+  let creds = stored_creds("emk_a", "evt_old", "agt_old")
+  apply_login(creds, "emk_a", "evt_new", "agt_new")
+  assert_eq(creds.agent_token, "evt_new")
+  assert_eq(creds.agent_id, "agt_new")
+}

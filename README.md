@@ -42,9 +42,10 @@ moon run --release cmd/everme-seekmoon -- mcp test
 ```
 
 `auth login` stores the account key, registers this machine's agent when the
-credential has none, and prints the agent id it holds. `auth register` is the
-repair path — after `auth disconnect-agent`, a dropped token, or a platform label
-the backend refused — and is idempotent.
+credential has none, and prints the agent id it holds. Logging in to a different
+account drops the agent this CLI had instead of carrying its token over. `auth
+register` is the repair path — after `auth disconnect-agent`, a dropped token, or
+a platform label the backend refused — and is idempotent.
 
 The skill text itself lives in `docs/SKILL.template.md`, where it can be edited and
 previewed as a document. `moon run tools/gen-skill` renders it into `docs/SKILL.md`,

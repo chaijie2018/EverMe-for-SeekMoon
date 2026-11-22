@@ -100,6 +100,17 @@ pub async fn register_agent(
 }
 
 ///|
+/// Drop this CLI's agent identity in memory: the token, the id, and the label
+/// they were registered under. Used when the agent is known to belong to another
+/// account, so the next registration cannot inherit it.
+fn forget_agent(creds : @creds.Credentials) -> Unit {
+  creds.agent_id = ""
+  creds.agent_token = ""
+  creds.platform = ""
+  creds.token_prefix = ""
+}
+
+///|
 /// The agent this machine already has, or a freshly registered one. Returns
 /// `(agentId, registeredNow)`. Idempotent on purpose: a stored agent token means
 /// there is nothing to register, and running this twice must not pile up agents

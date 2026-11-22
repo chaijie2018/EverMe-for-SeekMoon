@@ -208,15 +208,7 @@ async fn finish_login(
   let settings = @config.Settings::resolve()
   let base = if base.is_empty() { base_of_empty(settings) } else { base }
   let creds = @creds.Credentials::load(paths.credentials_file())
-  if !api_key.is_empty() {
-    creds.api_key = api_key
-  }
-  if !agent_token.is_empty() {
-    creds.agent_token = agent_token
-  }
-  if !agent_id.is_empty() {
-    creds.agent_id = agent_id
-  }
+  apply_login(creds, api_key, agent_token, agent_id)
   if !creds.has_api_key() {
     not_logged_in(
       "the backend approved the flow but returned no API key", "run `everme-seekmoon auth login` again",
@@ -278,6 +270,36 @@ async fn finish_login(
     "  \{agent_state_text(mine, registered, agent_error)}"
   emit(machine, text, data)
   0
+}
+
+///|
+/// Fold a login result into the stored credential.
+///
+/// A different account drops the agent this CLI had: an `evt_` belongs to the
+/// account that minted it, so carrying one over would file this machine's
+/// memories under the previous account's agent — and the platform label would
+/// be the old account's too.
+fn apply_login(
+  creds : @creds.Credentials,
+  api_key : String,
+  agent_token : String,
+  agent_id : String,
+) -> Unit {
+  let different_account = !api_key.is_empty() &&
+    !creds.api_key.is_empty() &&
+    creds.api_key != api_key
+  if different_account {
+    forget_agent(creds)
+  }
+  if !api_key.is_empty() {
+    creds.api_key = api_key
+  }
+  if !agent_token.is_empty() {
+    creds.agent_token = agent_token
+  }
+  if !agent_id.is_empty() {
+    creds.agent_id = agent_id
+  }
 }
 
 ///|
