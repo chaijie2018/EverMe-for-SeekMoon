@@ -5,7 +5,7 @@ import {
   "chaijie2018/EverMe-for-SeekMoon/api",
 }
 
-supported_targets = "+native"
+supported_targets = "+native +wasm"
 
 options(
   "allow-experimental-packages": [ "moonbitlang/core/async/fs" ],

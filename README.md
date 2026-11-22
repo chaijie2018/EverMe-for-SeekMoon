@@ -37,6 +37,21 @@ registered under. `--mode mcp-json` merges `~/.openseek/mcp.json` instead (or as
 well, with `both`), keeping a `<path>.bak` of the previous file. `--agents-md` adds
 a marked block to the workspace's `AGENTS.md`.
 
+## Build targets
+
+`moon.mod` sets `preferred_target = "wasm"`: the default `build`, `test` and `run`
+are the wasm ones, and that is the artifact `moonx` executes for a host. Native
+stays available (`+native +wasm` in every package) when a faster local loop helps:
+
+```bash
+moon build cmd/everme-seekmoon                    # wasm — what moonx runs
+moon run cmd/everme-seekmoon -- doctor            # wasm, under moonrun
+moon build --target native cmd/everme-seekmoon    # optional: native
+```
+
+Verified on wasm: `doctor` reached the gateway over HTTPS (`HTTP 200` for account
+and agent), and `mcp test` completed a real `mem_context`.
+
 Reopen the workspace in SeekMoon afterwards and ask "what do you remember about me?".
 
 ## Commands

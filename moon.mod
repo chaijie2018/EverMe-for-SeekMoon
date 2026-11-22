@@ -2,7 +2,7 @@ name = "chaijie2018/EverMe-for-SeekMoon"
 
 version = "0.1.0"
 
-preferred_target = "native"
+preferred_target = "wasm"
 
 readme = "README.md"
 
