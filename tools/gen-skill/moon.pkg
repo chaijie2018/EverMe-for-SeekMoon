@@ -1,0 +1,26 @@
+import {
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/stdio",
+  "moonbitlang/core/env",
+  "moonbitlang/x/sys",
+  "chaijie2018/EverMe-for-SeekMoon/api",
+  "chaijie2018/EverMe-for-SeekMoon/cli",
+  "chaijie2018/EverMe-for-SeekMoon/config",
+}
+
+supported_targets = "+native +wasm"
+
+import {
+  "moonbitlang/core/async",
+} for "wbtest"
+
+options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/fs",
+    "moonbitlang/core/async/stdio",
+  ],
+)
+
+pkgtype(kind: "executable")

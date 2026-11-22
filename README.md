@@ -39,6 +39,11 @@ credential has none, and prints the agent id it holds. `auth register` is the
 repair path — after `auth disconnect-agent`, a dropped token, or a platform label
 the backend refused — and is idempotent.
 
+The skill text itself lives in `docs/SKILL.template.md`, where it can be edited and
+previewed as a document. `moon run tools/gen-skill` renders it into `docs/SKILL.md`,
+and `moon test` fails when the two fall out of step, so the markdown really is the
+source.
+
 ## Build targets
 
 `moon.mod` sets `preferred_target = "wasm"`: the default `build`, `test` and `run`
