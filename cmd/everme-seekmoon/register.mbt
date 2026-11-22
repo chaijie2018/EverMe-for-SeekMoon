@@ -135,13 +135,83 @@ pub async fn ensure_agent(
   // it has. A dead token must not survive into the registration below, and the
   // label it carried says nothing about the label to try next.
   forget_agent(creds)
-  let (_, agent) = register_agent(client, fingerprint, platform, "SeekMoon")
+  let (_, agent) = mint_agent(paths, client, fingerprint, platform, creds)
+  (agent.agent_id, true)
+}
+
+///|
+/// Register this machine and store what proves it: the agent id, its token, the
+/// label it was registered under, and the token prefix a later run checks.
+///
+/// The store is proven writable before the account is asked — a token that
+/// cannot be written down would spend an agent this machine can never use — and
+/// an agent whose token still cannot be stored is retired, not abandoned.
+async fn mint_agent(
+  paths : @config.Paths,
+  client : @api.Client,
+  fingerprint : String,
+  platform : String,
+  creds : @creds.Credentials,
+) -> (Attempt, Registered) raise {
+  store_creds(paths.credentials_file(), creds)
+  let (attempt, agent) = register_agent(client, fingerprint, platform, "SeekMoon")
   creds.agent_id = agent.agent_id
   creds.agent_token = agent.agent_token
   creds.platform = agent.platform
   creds.token_prefix = agent.token_prefix
-  creds.save(paths.credentials_file())
-  (agent.agent_id, true)
+  match try_store(paths.credentials_file(), creds) {
+    Ok(_) => ()
+    Err(reason) => {
+      // The agent exists on the account but only this machine could have used
+      // it. Retire it rather than leave an orphan nothing can reach.
+      client.disconnect_agent(agent.agent_id) catch {
+        _ => ()
+      }
+      raise @api.ApiError({
+        kind: "io",
+        message: "registered \{agent.agent_id} but could not store its token: \{reason}",
+        hint: "check permissions on \{paths.credentials_file()}, then run `everme-seekmoon auth register` again",
+        http_status: 0,
+        code: 0,
+        request_id: "",
+      })
+    }
+  }
+  (attempt, agent)
+}
+
+///|
+/// `Credentials::save` with the failure handed back instead of raised, so a
+/// caller can turn it into an `ApiError` or undo what it already did.
+async fn try_store(
+  path : String,
+  creds : @creds.Credentials,
+) -> Result[Unit, String] {
+  let attempt : Result[Unit, Error] = Ok(creds.save(path)) catch {
+    error => Err(error)
+  }
+  match attempt {
+    Ok(_) => Ok(())
+    Err(error) => Err("\{error}")
+  }
+}
+
+///|
+/// Store the credential, or fail with the `io` kind the rest of the CLI reports
+/// a filesystem problem as.
+async fn store_creds(path : String, creds : @creds.Credentials) -> Unit raise {
+  match try_store(path, creds) {
+    Ok(_) => ()
+    Err(reason) =>
+      raise @api.ApiError({
+        kind: "io",
+        message: "cannot write \{path}: \{reason}",
+        hint: "check permissions on that directory, then run `everme-seekmoon auth register` again",
+        http_status: 0,
+        code: 0,
+        request_id: "",
+      })
+  }
 }
 
 ///|

@@ -348,24 +348,17 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
       verdict = "inconclusive: registration was skipped"
     } else {
       // One attempt under the configured label; a rejection is reported as the
-      // backend worded it, not retried under another label.
+      // backend worded it, not retried under another label. `mint_agent` also
+      // stores what was minted, so the probe cannot leave an agent behind that
+      // this machine does not hold the token for.
       let outcome : Result[(Attempt, Registered), @api.Failure] = Ok(
-        register_agent(client, fingerprint, platform, "SeekMoon"),
+        mint_agent(paths, client, fingerprint, platform, creds),
       ) catch {
         @api.ApiError(failure) => Err(failure)
         error => raise error
       }
       match outcome {
         Ok((attempt, registered)) => {
-          // Keep what we minted: the agent, its token, and the label/prefix that
-          // let a later run prove the token is still ours.
-          creds.agent_id = registered.agent_id
-          creds.agent_token = registered.agent_token
-          creds.platform = registered.platform
-          creds.token_prefix = registered.token_prefix
-          creds.save(paths.credentials_file()) catch {
-            _ => ()
-          }
           checks.push(
             Check::ok(
               "agents",

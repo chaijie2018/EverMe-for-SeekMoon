@@ -92,3 +92,32 @@ test "an agent that comes with the login replaces the stored one" {
   assert_eq(creds.agent_token, "evt_new")
   assert_eq(creds.agent_id, "agt_new")
 }
+
+///|
+async test "a write failure comes back as a reason instead of an exception" {
+  let creds = stored_creds("emk_a", "evt_a", "agt_a")
+  let dir = @fs.tmpdir(prefix="everme-seekmoon-store-")
+  let path = dir + "/credentials.json"
+  match try_store(path, creds) {
+    Ok(_) => assert_true(@fs.exists(path) catch { _ => false })
+    Err(reason) => fail("expected the credential to be written: \{reason}")
+  }
+  // A directory that cannot hold a file, which is what a wrong permission or a
+  // read-only home looks like from here.
+  match try_store("/dev/null/credentials.json", creds) {
+    Ok(_) => fail("writing under /dev/null should not succeed")
+    Err(_) => ()
+  }
+  @fs.remove(path) catch {
+    _ => ()
+  }
+}
+
+///|
+test "a first login has no agent to inherit" {
+  let creds = stored_creds("", "", "")
+  apply_login(creds, "emk_first", "", "")
+  assert_eq(creds.api_key, "emk_first")
+  assert_false(creds.has_agent_token())
+}
+
