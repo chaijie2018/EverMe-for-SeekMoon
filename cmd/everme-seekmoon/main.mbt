@@ -3,75 +3,6 @@
 // user can act on, which `dispatch` renders as text or as the error envelope.
 
 ///|
-/// Where things get installed: the skills library, the shared config, and the
-/// workspace whose `AGENTS.md` may be touched.
-fn location_options() -> Array[@argparse.OptionArg] {
-  [
-    @argparse.OptionArg(
-      "skills-dir",
-      long="skills-dir",
-      default_values=[""],
-      about="Skills library to install into (default: $HOME/.openseek/skills).",
-    ),
-    @argparse.OptionArg(
-      "mcp-config",
-      long="mcp-config",
-      default_values=[""],
-      about="User-level MCP config to merge into (default: $HOME/.openseek/mcp.json).",
-    ),
-    @argparse.OptionArg(
-      "workspace",
-      long="workspace",
-      default_values=[""],
-      about="Workspace whose AGENTS.md --agents-md touches (default: the current directory).",
-    ),
-  ]
-}
-
-///|
-/// `install`'s options: where, plus the binary path to record.
-fn install_options() -> Array[@argparse.OptionArg] {
-  [
-    @argparse.OptionArg(
-      "mode",
-      long="mode",
-      default_values=["skill"],
-      about="Where to install: skill (self-contained, default), mcp-json (the shared config), or both.",
-    ),
-    ..location_options(),
-    @argparse.OptionArg(
-      "command",
-      long="command",
-      default_values=[""],
-      about="Path of the binary mcp.json should launch (default: this executable's path).",
-    ),
-    @argparse.OptionArg(
-      "copy-to",
-      long="copy-to",
-      default_values=[""],
-      about="Copy this binary into that directory and record the copy (e.g. ~/.local/bin), so mcp.json does not point into _build.",
-    ),
-  ]
-}
-
-///|
-/// `install`'s flags.
-fn install_flags() -> Array[@argparse.FlagArg] {
-  [
-    @argparse.FlagArg(
-      "agents-md",
-      long="agents-md",
-      about="Also add a marked block to the workspace's AGENTS.md (creates it when missing).",
-    ),
-    @argparse.FlagArg(
-      "dry-run",
-      long="dry-run",
-      about="Report what would change; write nothing and register no agent.",
-    ),
-  ]
-}
-
-///|
 /// The options every command accepts: where to talk, whom to be, and how to
 /// print. Global so they read the same before or after the subcommand.
 fn global_options() -> Array[@argparse.OptionArg] {
@@ -151,6 +82,10 @@ fn root_command() -> @argparse.Command {
             "adopt-evercli",
             about="Reuse an evercli login already present on this machine.",
           ),
+          Command(
+            "register",
+            about="Bind this machine to the account as an agent; idempotent, and what `auth login` does on the way out.",
+          ),
           Command("logout", about="Delete the stored credential."),
           Command(
             "disconnect-agent",
@@ -163,37 +98,6 @@ fn root_command() -> @argparse.Command {
                 about="Agent id to disconnect; `everme-seekmoon doctor` prints this CLI's own agent id.",
               ),
             ],
-          ),
-        ],
-      ),
-      Command(
-        "install",
-        about="Wire EverMe memory into SeekMoon: register an agent and write the skill bundle.",
-        options=install_options(),
-        flags=install_flags(),
-      ),
-      Command(
-        "uninstall",
-        about="Remove what install wrote, and nothing else.",
-        options=[
-          @argparse.OptionArg(
-            "mode",
-            long="mode",
-            default_values=["skill"],
-            about="What to remove: skill, mcp-json, or both.",
-          ),
-          ..location_options(),
-        ],
-        flags=[
-          @argparse.FlagArg(
-            "agents-md",
-            long="agents-md",
-            about="Also remove the everme-seekmoon block from the workspace's AGENTS.md.",
-          ),
-          @argparse.FlagArg(
-            "dry-run",
-            long="dry-run",
-            about="Report what would change; write nothing.",
           ),
         ],
       ),
@@ -327,8 +231,6 @@ async fn run_command(name : String, m : @argparse.Matches) -> Int32 {
   match name {
     "version" => command_version(m)
     "auth" => auth_command(m)
-    "install" => install_command(m)
-    "uninstall" => uninstall_command(m)
     "import" => import_command(m)
     "mcp" => mcp_command(m)
     "doctor" => doctor_command(m)

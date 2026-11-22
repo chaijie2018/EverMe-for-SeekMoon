@@ -98,3 +98,48 @@ pub async fn register_agent(
     },
   )
 }
+
+///|
+/// The agent this machine already has, or a freshly registered one. Returns
+/// `(agentId, registeredNow)`. Idempotent on purpose: a stored agent token means
+/// there is nothing to register, and running this twice must not pile up agents
+/// on the account.
+pub async fn ensure_agent(
+  paths : @config.Paths,
+  base : String,
+  platform : String,
+) -> (String, Bool) raise {
+  let creds = @creds.Credentials::load(paths.credentials_file())
+  if !creds.has_api_key() {
+    not_logged_in(
+      "no API key stored, so no agent can be registered", "run `everme-seekmoon auth login`, or `everme-seekmoon auth adopt-evercli` to reuse an evercli login",
+    )
+  }
+  if creds.has_agent_token() {
+    return (creds.agent_id, false)
+  }
+  let client = @api.Client::new(base~).with_token(creds.api_key)
+  let fingerprint = @creds.machine_id(paths.machine_file())
+  let (_, agent) = register_agent(client, fingerprint, platform, "SeekMoon")
+  creds.agent_id = agent.agent_id
+  creds.agent_token = agent.agent_token
+  creds.platform = agent.platform
+  creds.token_prefix = agent.token_prefix
+  creds.save(paths.credentials_file())
+  (agent.agent_id, true)
+}
+
+///|
+/// One line saying what the credential store holds as an identity, for a login
+/// that registered on the way (or failed to).
+fn agent_state_text(agent_id : String, registered : Bool, error : String) -> String {
+  if !error.is_empty() {
+    "agent none  (registration failed: \{error})"
+  } else if agent_id.is_empty() {
+    "agent none"
+  } else if registered {
+    "agent \{agent_id}  (registered now)"
+  } else {
+    "agent \{agent_id}  (already stored)"
+  }
+}

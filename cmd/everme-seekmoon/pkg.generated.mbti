@@ -3,9 +3,12 @@ package "chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon"
 
 import {
   "chaijie2018/EverMe-for-SeekMoon/api",
+  "chaijie2018/EverMe-for-SeekMoon/config",
 }
 
 // Values
+pub async fn ensure_agent(@config.Paths, String, String) -> (String, Bool)
+
 pub fn exchange_ok(@api.Exchange) -> Bool
 
 pub async fn register_agent(@api.Client, String, String, String) -> (Attempt, Registered)

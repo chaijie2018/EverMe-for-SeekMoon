@@ -3,8 +3,8 @@
 // that answer the question this CLI cannot answer from source code: does this
 // EverMe backend accept the platform label we want to register under?
 //
-// The probe is deliberately shaped like `install` (list first, register only
-// when this machine has no agent yet) so running it twice does not pile up
+// The probe is deliberately shaped like `auth register` (list first, register
+// only when this machine has no agent yet) so running it twice does not pile up
 // agents, and a successful registration stores the token it minted.
 
 ///|
@@ -278,7 +278,7 @@ async fn doctor_command(m : @argparse.Matches) -> Int32 {
               {
                 kind: "auth",
                 message,
-                hint: "run `everme-seekmoon doctor --probe-platform --platform <label>` to register this CLI's own agent",
+                hint: "run `everme-seekmoon auth register --platform <label>` to bind this machine again",
                 http_status: listed.http_status,
                 code: listed.envelope.status,
                 request_id: listed.envelope.request_id,

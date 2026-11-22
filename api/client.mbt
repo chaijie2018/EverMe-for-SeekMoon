@@ -188,7 +188,7 @@ pub async fn Client::device_token(
 
 ///|
 /// `POST /agents/list` — the agents this account already registered for
-/// `platform` on this machine, so a re-install can reuse one instead of
+/// `platform` on this machine, so `auth register` can reuse one instead of
 /// minting another.
 pub async fn Client::list_agents(
   self : Client,

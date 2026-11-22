@@ -8,13 +8,14 @@
 async fn auth_command(m : @argparse.Matches) -> Int32 {
   guard m.subcommand is Some((name, selected)) else {
     usage(
-      "`auth` needs a subcommand: login, status, adopt-evercli, logout, or disconnect-agent",
+      "`auth` needs a subcommand: login, status, adopt-evercli, register, logout, or disconnect-agent",
     )
   }
   match name {
     "login" => auth_login(selected)
     "status" => auth_status(selected)
     "adopt-evercli" => auth_adopt(selected)
+    "register" => auth_register(selected)
     "logout" => auth_logout(selected)
     "disconnect-agent" => auth_disconnect(selected)
     _ => usage("unknown auth subcommand: \{name}")
@@ -41,12 +42,12 @@ async fn auth_login(m : @argparse.Matches) -> Int32 {
   let platform = platform_of(m, settings)
   let api_key = value_of(m, "api-key")
   if !api_key.is_empty() {
-    return finish_login(paths, base, api_key, "", "", machine)
+    return finish_login(paths, base, api_key, "", "", platform, machine)
   }
   let client = @api.Client::new(base~)
   let device_code_flag = value_of(m, "device-code")
   if !device_code_flag.is_empty() {
-    return poll_device(paths, client, device_code_flag, machine)
+    return poll_device(paths, client, device_code_flag, platform, machine)
   }
   let fingerprint = @creds.machine_id(paths.machine_file())
   let start = client.device_start(
@@ -95,6 +96,7 @@ async fn auth_login(m : @argparse.Matches) -> Int32 {
     start.device_code,
     start.expires_in,
     start.interval,
+    platform,
     machine,
   )
 }
@@ -136,9 +138,10 @@ async fn poll_device(
   paths : @config.Paths,
   client : @api.Client,
   device_code : String,
+  platform : String,
   machine : Bool,
 ) -> Int32 {
-  poll_loop(paths, client, device_code, 0, DefaultPollSeconds, machine)
+  poll_loop(paths, client, device_code, 0, DefaultPollSeconds, platform, machine)
 }
 
 ///|
@@ -150,6 +153,7 @@ async fn poll_loop(
   device_code : String,
   expires_in : Int32,
   interval : Int32,
+  platform : String,
   machine : Bool,
 ) -> Int32 {
   let interval = if interval > 0 { interval } else { DefaultPollSeconds }
@@ -184,6 +188,7 @@ async fn poll_loop(
     token.api_key,
     token.agent_token,
     token.agent_id,
+    platform,
     machine,
   )
 }
@@ -197,6 +202,7 @@ async fn finish_login(
   api_key : String,
   agent_token : String,
   agent_id : String,
+  platform : String,
   machine : Bool,
 ) -> Int32 {
   let settings = @config.Settings::resolve()
@@ -227,17 +233,49 @@ async fn finish_login(
   account.save(paths.account_file()) catch {
     _ => ()
   }
+  // Logging in is not finished until this machine has an identity of its own:
+  // without an agent token the memory endpoints cannot attribute a single row.
+  // A refused registration does not undo the login — the credential is stored
+  // and `auth register --platform <label>` can try another label later.
+  let mut mine = creds.agent_id
+  let mut registered = false
+  let mut agent_error = ""
+  if !creds.has_agent_token() {
+    let outcome : Result[(String, Bool), @api.Failure] = Ok(
+      ensure_agent(paths, base, platform),
+    ) catch {
+      @api.ApiError(failure) => Err(failure)
+      error => raise error
+    }
+    match outcome {
+      Ok((id, now)) => {
+        mine = id
+        registered = now
+      }
+      Err(failure) => {
+        agent_error = if failure.hint.is_empty() {
+          failure.message
+        } else {
+          "\{failure.message} (\{failure.hint})"
+        }
+      }
+    }
+  }
   let data : Json = {
     "loggedIn": true,
     "email": Json(info.email),
     "accountId": Json(info.account_id),
     "apiKey": Json(@redact.mask(creds.api_key)),
     "agentToken": Json(@redact.mask(creds.agent_token)),
-    "agentId": Json(creds.agent_id),
+    "agentId": Json(mine),
+    "agentRegistered": Json(registered),
+    "agentError": Json(agent_error),
     "scopes": Json(info.scopes),
     "credentialsFile": Json(paths.credentials_file()),
   }
-  let text = "logged in as \{info.email} (\{@redact.mask(creds.api_key)})\ncredentials: \{paths.credentials_file()}"
+  let text = "logged in as \{info.email} (\{@redact.mask(creds.api_key)})\n" +
+    "  credentials \{paths.credentials_file()}\n" +
+    "  \{agent_state_text(mine, registered, agent_error)}"
   emit(machine, text, data)
   0
 }
@@ -301,6 +339,7 @@ async fn auth_adopt(m : @argparse.Matches) -> Int32 {
   let settings = @config.Settings::resolve()
   let machine = machine_of(m)
   let base = base_of(m, settings)
+  let platform = platform_of(m, settings)
   let home = @config.home()
   let adopted = @creds.adopt_evercli(home)
   guard adopted is Some(adopted) else {
@@ -313,10 +352,33 @@ async fn auth_adopt(m : @argparse.Matches) -> Int32 {
   // Only the account key crosses over. The agent token in that file belongs to
   // whichever agent evercli registered; borrowing it would make this CLI's
   // memories show up as that agent's, and it would break the day evercli
-  // rotates it. Our own agent is registered by `install` / `doctor`.
+  // rotates it. `finish_login` registers our own agent on the way out.
   creds.api_key = adopted.api_key
   creds.save(paths.credentials_file())
-  finish_login(paths, base, creds.api_key, "", "", machine)
+  finish_login(paths, base, creds.api_key, "", "", platform, machine)
+}
+
+///|
+/// `everme-seekmoon auth register` — bind this machine to the account as an agent.
+/// Idempotent: with an agent token already stored it reports that one and
+/// registers nothing. This is the repair path after `auth disconnect-agent`, a
+/// dropped token, or a rejected platform label.
+async fn auth_register(m : @argparse.Matches) -> Int32 {
+  let paths = @config.Paths::resolve()
+  let settings = @config.Settings::resolve()
+  let machine = machine_of(m)
+  let base = base_of(m, settings)
+  let platform = platform_of(m, settings)
+  let (agent_id, registered) = ensure_agent(paths, base, platform)
+  let creds = @creds.Credentials::load(paths.credentials_file())
+  let text = "\{agent_state_text(agent_id, registered, "")}\n  platform  \{if creds.platform.is_empty() { "unrecorded" } else { creds.platform }}\n  stored at \{paths.credentials_file()}"
+  emit(machine, text, {
+    "agentId": Json(agent_id),
+    "registered": Json(registered),
+    "platform": Json(creds.platform),
+    "credentialsFile": Json(paths.credentials_file()),
+  })
+  0
 }
 
 ///|
@@ -370,7 +432,7 @@ async fn auth_disconnect(m : @argparse.Matches) -> Int32 {
     }
   }
   let text = if mine {
-    "disconnected agent \{agent_id} and forgot its token; run `everme-seekmoon doctor --probe-platform` to register a fresh one"
+    "disconnected agent \{agent_id} and forgot its token; run `everme-seekmoon auth register` to bind this machine again"
   } else {
     "disconnected agent \{agent_id}; this CLI's own credential is unchanged"
   }

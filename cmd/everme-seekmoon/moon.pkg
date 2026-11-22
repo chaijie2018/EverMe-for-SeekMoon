@@ -11,7 +11,6 @@ import {
   "chaijie2018/EverMe-for-SeekMoon/config",
   "chaijie2018/EverMe-for-SeekMoon/creds",
   "chaijie2018/EverMe-for-SeekMoon/importer",
-  "chaijie2018/EverMe-for-SeekMoon/install",
   "chaijie2018/EverMe-for-SeekMoon/mcp",
   "chaijie2018/EverMe-for-SeekMoon/redact",
 }
