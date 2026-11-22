@@ -12,7 +12,7 @@ const RequestTimeoutMs : Int32 = 30000
 ///|
 /// The user agent this build reports, so backend audit logs can tell it apart
 /// from `evercli` and from the Node MCP server.
-const UserAgent : String = "everme-seekmoon/0.1.0 (seekmoon)"
+const UserAgent : String = "everme-seekmoon/0.1.1 (seekmoon)"
 
 ///|
 /// Honestly, a client is a base URL, the token to present, and how long to wait.

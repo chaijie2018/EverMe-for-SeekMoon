@@ -16,12 +16,12 @@ ships with the toolchain and resolves the pinned version on first use. On a
 machine that has never logged in:
 
 ```bash
-moonx chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.0 auth login     # or: moonx chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.0 auth adopt-evercli
+moonx chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.1 auth login     # or: moonx chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.1 auth adopt-evercli
 ```
 
 That stores the account key and binds this machine as an agent. If the tools
-still answer "no agent", `moonx chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.0 auth register` binds it again and
-`moonx chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.0 doctor` says what is missing.
+still answer "no agent", `moonx chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.1 auth register` binds it again and
+`moonx chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.1 doctor` says what is missing.
 
 Until then the tools below are not reachable.
 

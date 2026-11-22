@@ -6,7 +6,7 @@ pub const DefaultApiBase : String = "https://api.everme.evermind.ai"
 
 pub const DefaultPlatform : String = "evercli"
 
-pub const Version : String = "0.1.0"
+pub const Version : String = "0.1.1"
 
 pub fn api_root(String) -> String raise
 

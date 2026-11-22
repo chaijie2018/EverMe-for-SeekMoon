@@ -1,6 +1,6 @@
 name = "chaijie2018/EverMe-for-SeekMoon"
 
-version = "0.1.0"
+version = "0.1.1"
 
 preferred_target = "wasm"
 

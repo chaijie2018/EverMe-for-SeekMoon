@@ -18,7 +18,7 @@ pub const DefaultPlatform : String = "evercli"
 
 ///|
 /// The version this build reports to EverMe and in its own `--version`.
-pub const Version : String = "0.1.0"
+pub const Version : String = "0.1.1"
 
 ///|
 /// Which endpoint and which platform label to use.

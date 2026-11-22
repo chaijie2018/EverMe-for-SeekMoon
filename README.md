@@ -20,7 +20,7 @@ evercli login.
 ## Install
 
 The server is a MoonBit package: the skill's `mcp.json` launches
-`moonx chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.0 mcp serve`.
+`moonx chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.1 mcp serve`.
 `moonx` comes with the toolchain and resolves that pinned version from the
 registry, so no absolute path is recorded and a rebuild or a moved checkout cannot
 break the host. Nothing on this side installs files: the skill directory ships

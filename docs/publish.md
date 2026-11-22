@@ -12,7 +12,7 @@ The marketplace lists two things, and this project ships both halves:
 
 - **the skill** — `SKILL.md` plus the `mcp.json` that registers the server;
 - **the server itself** — a MoonBit package compiled to wasm and run by `moonx`:
-  `moonx chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.0 mcp serve`.
+  `moonx chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.1 mcp serve`.
 
 The skill is published here; the package is published to the module registry
 with `moon publish`. Publish the module **first** — until that version exists,
@@ -29,7 +29,7 @@ Three files, none of which names this machine:
 | File | Content |
 |---|---|
 | `SKILL.md` | the rendered skill (from `docs/SKILL.template.md`) |
-| `mcp.json` | `{"mcpServers":{"everme-seekmoon":{"command":"moonx","args":["chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.0","mcp","serve"]}}}` |
+| `mcp.json` | `{"mcpServers":{"everme-seekmoon":{"command":"moonx","args":["chaijie2018/EverMe-for-SeekMoon/cmd/everme-seekmoon@0.1.1","mcp","serve"]}}}` |
 | `README.md` | what it is, how to run it, license |
 
 `--dry-run` reports the files and writes nothing.
@@ -46,12 +46,12 @@ That writes a 32-hex publish token to `$MOON_HOME/credentials.json`
 ## 3. Publish
 
 ```bash
-skills publish /tmp/everme-seekmoon-skill --version 0.1.0
+skills publish /tmp/everme-seekmoon-skill --version 0.1.1
 ```
 
 What the client does: zip the directory → validate `SKILL.md`, the paths and the
 sizes locally → read the Bearer token → `POST
-https://mooncakes.io/api/v0/skills?version=0.1.0` → compare the `archive_digest`
+https://mooncakes.io/api/v0/skills?version=0.1.1` → compare the `archive_digest`
 the server returns with the local SHA-256. The version must be SemVer 2.0.0 and
 is **immutable** once published.
 
@@ -63,7 +63,7 @@ is **immutable** once published.
 | `description` | non-empty, ≤ 1024 characters | ~300 ✅ |
 | `SKILL.md` | UTF-8, ≤ 256 KiB | ~4.7 KB ✅ |
 | archive | regular files and directories only (no symlinks, no device files), ≤ 2000 entries, zip ≤ 20 MiB, unpacked ≤ 50 MiB | 3 files ✅ |
-| `version` | SemVer 2.0.0, immutable | `0.1.0` |
+| `version` | SemVer 2.0.0, immutable | `0.1.1` |
 
 `tools/gen-skill` refuses to write a directory whose rendered skill fails the frontmatter
 or size rules (`publish_problems()`), because an upload the server rejects burns a
