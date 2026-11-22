@@ -112,9 +112,8 @@ fn forget_agent(creds : @creds.Credentials) -> Unit {
 
 ///|
 /// The agent this machine already has, or a freshly registered one. Returns
-/// `(agentId, registeredNow)`. Idempotent on purpose: a stored agent token means
-/// there is nothing to register, and running this twice must not pile up agents
-/// on the account.
+/// `(agentId, registeredNow)`. Idempotent on purpose: an agent the account still
+/// lists as connected is reused, so running this twice does not pile up agents.
 pub async fn ensure_agent(
   paths : @config.Paths,
   base : String,
@@ -126,11 +125,16 @@ pub async fn ensure_agent(
       "no API key stored, so no agent can be registered", "run `everme-seekmoon auth login`, or `everme-seekmoon auth adopt-evercli` to reuse an evercli login",
     )
   }
-  if creds.has_agent_token() {
-    return (creds.agent_id, false)
-  }
   let client = @api.Client::new(base~).with_token(creds.api_key)
   let fingerprint = @creds.machine_id(paths.machine_file())
+  if creds.has_agent_token() &&
+    agent_still_listed(client, creds, platform, fingerprint~) {
+    return (creds.agent_id, false)
+  }
+  // Either this machine has no identity, or the account no longer lists the one
+  // it has. A dead token must not survive into the registration below, and the
+  // label it carried says nothing about the label to try next.
+  forget_agent(creds)
   let (_, agent) = register_agent(client, fingerprint, platform, "SeekMoon")
   creds.agent_id = agent.agent_id
   creds.agent_token = agent.agent_token
@@ -138,6 +142,34 @@ pub async fn ensure_agent(
   creds.token_prefix = agent.token_prefix
   creds.save(paths.credentials_file())
   (agent.agent_id, true)
+}
+
+///|
+/// Whether the account still lists our agent as connected. A stored token is not
+/// proof of life: an agent can be retired from another machine, and evercli
+/// rotates the one it adopted, so `auth register` asks instead of assuming.
+///
+/// The lookup uses the label the agent was registered under, not the one being
+/// registered now — otherwise a stale label would look like a missing agent and
+/// every attempt would mint a new one. The rule for "still ours" is
+/// `Credentials::verify_agent`, the same one `doctor` reports by.
+async fn agent_still_listed(
+  client : @api.Client,
+  creds : @creds.Credentials,
+  platform : String,
+  fingerprint~ : String,
+) -> Bool raise {
+  if creds.agent_id.is_empty() {
+    return false
+  }
+  let label = if creds.platform.is_empty() { platform } else { creds.platform }
+  let items = client.list_agents(platform=label, fingerprint~)
+  @creds.verify_agent(
+    creds.agent_id,
+    effective_prefix(creds),
+    creds.platform,
+    items,
+  ) is Ok(_)
 }
 
 ///|
