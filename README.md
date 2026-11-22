@@ -98,6 +98,7 @@ with the same `error.type` taxonomy and exit codes as upstream.
 | Path | Contents |
 |---|---|
 | `~/.local/share/everme-seekmoon/credentials.json` | `0600`: the `emk_` account key and this CLI's own `evt_` agent token |
+| `~/.local/share/everme-seekmoon/credentials.json.lock` | Empty; serialises registration so two logins cannot mint two agents |
 | `~/.config/everme-seekmoon/account.json` | Cached account snapshot (no secrets) |
 | `~/.local/share/everme-seekmoon/import-state.json` | Per-session import cursor |
 

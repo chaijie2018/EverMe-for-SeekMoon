@@ -121,3 +121,20 @@ test "a first login has no agent to inherit" {
   assert_false(creds.has_agent_token())
 }
 
+///|
+async test "only one process can hold the registration lock at a time" {
+  let dir = @fs.tmpdir(prefix="everme-seekmoon-lock-")
+  let path = dir + "/credentials.json.lock"
+  let first = registration_lock(path)
+  let second = @fs.open(path, mode=WriteOnly, create_mode=OpenOrCreate)
+  let blocked = second.try_lock(Exclusive) catch { _ => true }
+  assert_false(blocked)
+  second.close()
+  first.close()
+  // Released with the holder, not with the file: the next run can take it.
+  let third = registration_lock(path)
+  third.close()
+  @fs.remove(path) catch {
+    _ => ()
+  }
+}

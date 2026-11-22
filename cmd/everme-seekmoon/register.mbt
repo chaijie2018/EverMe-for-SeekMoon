@@ -119,15 +119,33 @@ pub async fn ensure_agent(
   base : String,
   platform : String,
 ) -> (String, Bool) raise {
+  let stored = @creds.Credentials::load(paths.credentials_file())
+  if !stored.has_api_key() {
+    not_logged_in(
+      "no API key stored, so no agent can be registered", "run `everme-seekmoon auth login`, or `everme-seekmoon auth adopt-evercli` to reuse an evercli login",
+    )
+  }
+  let client = @api.Client::new(base~).with_token(stored.api_key)
+  let fingerprint = @creds.machine_id(paths.machine_file())
+  if stored.has_agent_token() &&
+    agent_still_listed(client, stored, platform, fingerprint~) {
+    return (stored.agent_id, false)
+  }
+  // One process registers at a time: two logins started together would both see
+  // "no agent" above and mint one each. The lock is advisory and dies with the
+  // process that holds it, so a crash cannot wedge the next run.
+  let lock = registration_lock(paths.credentials_file() + ".lock")
+  defer lock.close()
+  // Whoever waited on the lock re-reads the store instead of trusting the
+  // snapshot taken before it: the other process may have registered already.
   let creds = @creds.Credentials::load(paths.credentials_file())
   if !creds.has_api_key() {
     not_logged_in(
       "no API key stored, so no agent can be registered", "run `everme-seekmoon auth login`, or `everme-seekmoon auth adopt-evercli` to reuse an evercli login",
     )
   }
-  let client = @api.Client::new(base~).with_token(creds.api_key)
-  let fingerprint = @creds.machine_id(paths.machine_file())
   if creds.has_agent_token() &&
+    creds.agent_id != stored.agent_id &&
     agent_still_listed(client, creds, platform, fingerprint~) {
     return (creds.agent_id, false)
   }
@@ -137,6 +155,21 @@ pub async fn ensure_agent(
   forget_agent(creds)
   let (_, agent) = mint_agent(paths, client, fingerprint, platform, creds)
   (agent.agent_id, true)
+}
+
+///|
+/// Take the exclusive lock that makes "look, then register" safe across
+/// processes. `try_lock` is only used by the test; the CLI blocks, because the
+/// work being serialised is a single request.
+async fn registration_lock(path : String) -> @fs.File raise {
+  let file = @fs.open(
+    path,
+    mode=WriteOnly,
+    create_mode=OpenOrCreate,
+    permission=0o600,
+  )
+  file.lock(Exclusive)
+  file
 }
 
 ///|
